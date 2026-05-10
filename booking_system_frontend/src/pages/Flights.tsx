@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Flight } from '../types';
+import type { Flight, SeatClass } from '../types';
 import { LoadingSpinner } from '../components/common';
 import { FlightCard } from '../components/flights/FlightCard';
 import { UserIdentification } from '../components/user/UserIdentification';
@@ -17,6 +17,7 @@ export const Flights = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
+  const [selectedSeatClass, setSelectedSeatClass] = useState<SeatClass | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
 
@@ -41,22 +42,37 @@ export const Flights = () => {
     setFilteredFlights(filtered);
   }, [searchTerm, flights]);
 
-  const loadFlights = async () => {
+  const loadFlights = async (retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
     setIsLoading(true);
     try {
       const data = await getFlights();
       setFlights(data);
       setFilteredFlights(data);
     } catch (error: any) {
-      toast.error('Failed to load flights');
-      console.error(error);
+      if (retryCount < MAX_RETRIES) {
+        toast.error(`Failed to load flights. Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+        console.warn(`Retry attempt ${retryCount + 1} after error:`, error);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+        
+        // Recursive retry
+        return loadFlights(retryCount + 1);
+      } else {
+        toast.error('Failed to load flights after multiple attempts');
+        console.error('Max retries reached:', error);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBookFlight = (flight: Flight) => {
+  const handleBookFlight = (flight: Flight, seatClass: SeatClass) => {
     setSelectedFlight(flight);
+    setSelectedSeatClass(seatClass);
     
     if (!user) {
       // Show user identification modal first
@@ -165,6 +181,7 @@ export const Flights = () => {
         isOpen={showBookingModal}
         onClose={() => setShowBookingModal(false)}
         flight={selectedFlight}
+        seatClass={selectedSeatClass}
         onSuccess={handleBookingSuccess}
       />
     </div>

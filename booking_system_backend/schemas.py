@@ -8,8 +8,14 @@ class FlightOut(BaseModel):
     destination: str
     departure_time: str
     arrival_time: str
-    price: int
-    seats_available: int
+    base_price: int  # Economy price
+    economy_price: int  # Computed: base_price * 1
+    business_price: int  # Computed: base_price * 2
+    galaxium_price: int  # Computed: base_price * 5
+    total_seats: int
+    economy_seats_available: int
+    business_seats_available: int
+    galaxium_seats_available: int
 
     class Config:
         from_attributes = True
@@ -19,12 +25,14 @@ class BookingRequest(BaseModel):
     user_id: int
     name: str
     flight_id: int
+    seat_class: str  # 'economy', 'business', or 'galaxium'
 
 
 class BookingOut(BaseModel):
     booking_id: int
     user_id: int
     flight_id: int
+    seat_class: str
     status: str
     booking_time: str
 

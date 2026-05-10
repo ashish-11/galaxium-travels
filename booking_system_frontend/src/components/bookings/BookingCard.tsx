@@ -1,4 +1,4 @@
-import type { Booking, Flight } from '../../types';
+import type { Booking, Flight, SeatClass } from '../../types';
 import { Card, Button } from '../common';
 import { Plane, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { formatDate, formatCurrency } from '../../utils/formatters';
@@ -38,6 +38,36 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
     }
   };
 
+  const getSeatClassBadge = (seatClass: SeatClass) => {
+    const badges = {
+      economy: { icon: '💺', label: 'Economy', color: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
+      business: { icon: '🛋️', label: 'Business', color: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },
+      galaxium: { icon: '👑', label: 'Galaxium', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+    };
+
+    const badge = badges[seatClass];
+    return (
+      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold border ${badge.color}`}>
+        <span>{badge.icon}</span>
+        {badge.label}
+      </span>
+    );
+  };
+
+  const getPrice = () => {
+    if (!flight) return 0;
+    switch (booking.seat_class) {
+      case 'economy':
+        return flight.economy_price;
+      case 'business':
+        return flight.business_price;
+      case 'galaxium':
+        return flight.galaxium_price;
+      default:
+        return flight.base_price;
+    }
+  };
+
   const canCancel = booking.status === 'booked';
 
   return (
@@ -69,11 +99,14 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
         {/* Flight Details */}
         {flight ? (
           <div className="space-y-3 mb-4">
-            <div>
-              <h3 className="text-xl font-bold text-star-white mb-1">
-                {flight.origin} → {flight.destination}
-              </h3>
-              <p className="text-sm text-star-white/60">Flight #{flight.flight_id}</p>
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-xl font-bold text-star-white mb-1">
+                  {flight.origin} → {flight.destination}
+                </h3>
+                <p className="text-sm text-star-white/60">Flight #{flight.flight_id}</p>
+              </div>
+              {getSeatClassBadge(booking.seat_class)}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -94,7 +127,7 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
             <div className="flex items-center justify-between pt-3 border-t border-white/10">
               <span className="text-sm text-star-white/60">Price</span>
               <span className="text-lg font-bold text-star-white">
-                {formatCurrency(flight.price)}
+                {formatCurrency(getPrice())}
               </span>
             </div>
           </div>

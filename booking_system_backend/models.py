@@ -16,13 +16,17 @@ class Flight(Base):
     destination = Column(String, nullable=False)
     departure_time = Column(String, nullable=False)
     arrival_time = Column(String, nullable=False)
-    price = Column(Integer, nullable=False)
-    seats_available = Column(Integer, nullable=False)
+    base_price = Column(Integer, nullable=False)  # Economy price
+    total_seats = Column(Integer, nullable=False)  # Total capacity
+    economy_seats_available = Column(Integer, nullable=False)
+    business_seats_available = Column(Integer, nullable=False)
+    galaxium_seats_available = Column(Integer, nullable=False)
 
 class Booking(Base):
     __tablename__ = 'bookings'
     booking_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     flight_id = Column(Integer, ForeignKey('flights.flight_id'), nullable=False)
+    seat_class = Column(String, nullable=False)  # 'economy', 'business', 'galaxium'
     status = Column(String, nullable=False)
-    booking_time = Column(String, nullable=False) 
+    booking_time = Column(String, nullable=False)

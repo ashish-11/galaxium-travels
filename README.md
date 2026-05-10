@@ -15,23 +15,31 @@ A complete full-stack application for booking interplanetary space travel, featu
 ## 🏗️ Architecture
 
 ```
-galaxium-travels-infrastructure/
+galaxium-travels/
 ├── booking_system_backend/     # FastAPI backend (Python)
 │   ├── server.py              # Main server with REST & MCP
 │   ├── services/              # Business logic layer
 │   ├── models.py              # SQLAlchemy ORM models
+│   ├── schemas.py             # Pydantic schemas
+│   ├── db.py                  # Database configuration
+│   ├── seed.py                # Database seeding script
 │   └── tests/                 # Test suite
 │
 ├── booking_system_frontend/    # React frontend (TypeScript)
 │   ├── src/
 │   │   ├── components/        # Reusable UI components
-│   │   ├── pages/            # Route pages
-│   │   ├── services/         # API integration
-│   │   └── types/            # TypeScript definitions
-│   └── dist/                 # Production build
+│   │   ├── pages/             # Route pages
+│   │   ├── services/          # API integration
+│   │   ├── types/             # TypeScript definitions
+│   │   ├── hooks/             # Custom React hooks
+│   │   └── utils/             # Utility functions
+│   └── dist/                  # Production build
 │
-├── start.sh                   # Unix/Mac startup script
-└── start.bat                  # Windows startup script
+├── plans/                      # Implementation documentation
+├── .bob/                       # Bob AI agent rules
+├── start.sh                    # Unix/Mac startup script
+├── AGENTS.md                   # Agent guidance documentation
+└── README.md                   # This file
 ```
 
 ## 🚀 Quick Start
@@ -46,12 +54,8 @@ galaxium-travels-infrastructure/
 
 #### On macOS/Linux:
 ```bash
+chmod +x start.sh
 ./start.sh
-```
-
-#### On Windows:
-```bash
-start.bat
 ```
 
 This will automatically:
@@ -59,6 +63,8 @@ This will automatically:
 - ✅ Start the backend server on port 8080
 - ✅ Start the frontend dev server on port 5173
 - ✅ Open both in separate terminal windows
+
+**Note**: Windows users should use Option 2 (Manual Start) below.
 
 ### Option 2: Manual Start
 
@@ -145,7 +151,13 @@ The system comes pre-seeded with:
 ### Backend Tests
 ```bash
 cd booking_system_backend
-pytest
+pytest -v
+```
+
+Run specific test:
+```bash
+cd booking_system_backend
+pytest tests/test_services.py::test_function_name -v
 ```
 
 ### Frontend Build Test
@@ -207,6 +219,20 @@ colors: {
 - Verify backend is running on http://localhost:8080
 - Check CORS settings in backend
 - Ensure `.env` file exists in frontend with correct API URL
+
+## 🏛️ Project Structure
+
+### Key Files
+- **server.py** - FastAPI + FastMCP server (MCP server MUST be created before FastAPI app)
+- **services/** - Business logic layer (returns `Type | ErrorResponse`)
+- **models.py** - SQLAlchemy ORM models
+- **schemas.py** - Pydantic validation schemas
+- **db.py** - Database session management
+
+### Design Patterns
+- **Service Layer Pattern** - All business logic in services/
+- **Error Handling** - Services return union types, not exceptions
+- **Session Management** - MCP tools use manual sessions, REST uses dependency injection
 
 ## 📄 License
 

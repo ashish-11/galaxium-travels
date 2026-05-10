@@ -1,17 +1,58 @@
-import type { Flight } from '../../types';
+import { useState } from 'react';
+import type { Flight, SeatClass } from '../../types';
 import { Card, Button } from '../common';
-import { Plane, Clock, DollarSign, Users } from 'lucide-react';
+import { Plane, Clock } from 'lucide-react';
 import { formatCurrency, formatDate, formatTime, calculateDuration } from '../../utils/formatters';
 import { motion } from 'framer-motion';
 
 interface FlightCardProps {
   flight: Flight;
-  onBook: (flight: Flight) => void;
+  onBook: (flight: Flight, seatClass: SeatClass) => void;
 }
 
 export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
-  const isLowSeats = flight.seats_available <= 2;
-  const isSoldOut = flight.seats_available === 0;
+  const [selectedClass, setSelectedClass] = useState<SeatClass | null>(null);
+
+  const seatClasses = [
+    {
+      type: 'economy' as SeatClass,
+      label: 'Economy',
+      price: flight.economy_price,
+      available: flight.economy_seats_available,
+      icon: '💺',
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-500/10',
+      borderColor: 'border-blue-500/30',
+      hoverBorder: 'hover:border-blue-500/50',
+    },
+    {
+      type: 'business' as SeatClass,
+      label: 'Business',
+      price: flight.business_price,
+      available: flight.business_seats_available,
+      icon: '🛋️',
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-500/10',
+      borderColor: 'border-purple-500/30',
+      hoverBorder: 'hover:border-purple-500/50',
+    },
+    {
+      type: 'galaxium' as SeatClass,
+      label: 'Galaxium',
+      price: flight.galaxium_price,
+      available: flight.galaxium_seats_available,
+      icon: '👑',
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-500/10',
+      borderColor: 'border-yellow-500/30',
+      hoverBorder: 'hover:border-yellow-500/50',
+    },
+  ];
+
+  const totalAvailable =
+    flight.economy_seats_available +
+    flight.business_seats_available +
+    flight.galaxium_seats_available;
 
   return (
     <motion.div
@@ -39,7 +80,7 @@ export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
         </div>
 
         {/* Flight Details */}
-        <div className="space-y-3 mb-6 flex-1">
+        <div className="space-y-3 mb-4">
           {/* Departure & Arrival */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -69,32 +110,63 @@ export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
               Duration: {calculateDuration(flight.departure_time, flight.arrival_time)}
             </span>
           </div>
+        </div>
 
-          {/* Price */}
-          <div className="flex items-center gap-2">
-            <DollarSign size={16} className="text-alien-green" />
-            <span className="text-2xl font-bold text-star-white">
-              {formatCurrency(flight.price)}
-            </span>
-            <span className="text-sm text-star-white/60">per seat</span>
-          </div>
-
-          {/* Seats Available */}
-          <div className="flex items-center gap-2">
-            <Users size={16} className={isLowSeats ? 'text-solar-orange' : 'text-star-white/70'} />
-            <span className={`text-sm ${isLowSeats ? 'text-solar-orange font-semibold' : 'text-star-white/70'}`}>
-              {isSoldOut ? 'Sold Out' : `${flight.seats_available} seats available`}
-            </span>
-          </div>
+        {/* Seat Class Selection */}
+        <div className="space-y-2 mb-4 flex-1">
+          <h4 className="text-sm font-semibold text-star-white/80">
+            Select Class
+          </h4>
+          {seatClasses.map((seatClass) => (
+            <button
+              key={seatClass.type}
+              onClick={() => setSelectedClass(seatClass.type)}
+              disabled={seatClass.available === 0}
+              className={`w-full p-3 rounded-lg border-2 transition-all ${
+                selectedClass === seatClass.type
+                  ? 'border-cosmic-purple bg-cosmic-purple/20'
+                  : `${seatClass.borderColor} ${seatClass.hoverBorder}`
+              } ${
+                seatClass.available === 0
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'cursor-pointer'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{seatClass.icon}</span>
+                  <div className="text-left">
+                    <p className={`font-semibold ${seatClass.color}`}>
+                      {seatClass.label}
+                    </p>
+                    <p className="text-xs text-star-white/60">
+                      {seatClass.available === 0
+                        ? 'Sold out'
+                        : `${seatClass.available} seat${seatClass.available !== 1 ? 's' : ''} available`}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-star-white">
+                    {formatCurrency(seatClass.price)}
+                  </p>
+                </div>
+              </div>
+            </button>
+          ))}
         </div>
 
         {/* Book Button */}
         <Button
-          onClick={() => onBook(flight)}
-          disabled={isSoldOut}
+          onClick={() => selectedClass && onBook(flight, selectedClass)}
+          disabled={!selectedClass || totalAvailable === 0}
           className="w-full"
         >
-          {isSoldOut ? 'Sold Out' : 'Book Now'}
+          {totalAvailable === 0
+            ? 'Sold Out'
+            : !selectedClass
+            ? 'Select a Class'
+            : `Book ${selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)}`}
         </Button>
       </Card>
     </motion.div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Flight } from '../../types';
+import type { Flight, SeatClass } from '../../types';
 import { Modal, Button } from '../common';
 import { Plane, Calendar, Clock, DollarSign } from 'lucide-react';
 import { formatCurrency, formatDate, calculateDuration } from '../../utils/formatters';
@@ -11,14 +11,32 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   flight: Flight | null;
+  seatClass: SeatClass | null;
   onSuccess: () => void;
 }
 
-export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModalProps) => {
+export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: BookingModalProps) => {
   const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
 
-  if (!flight) return null;
+  if (!flight || !seatClass) return null;
+
+  const getSeatClassInfo = (seatClass: SeatClass) => {
+    const info = {
+      economy: { icon: '💺', label: 'Economy', color: 'text-blue-400', bgColor: 'bg-blue-500/20' },
+      business: { icon: '🛋️', label: 'Business', color: 'text-purple-400', bgColor: 'bg-purple-500/20' },
+      galaxium: { icon: '👑', label: 'Galaxium', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+    };
+    return info[seatClass];
+  };
+
+  const classInfo = getSeatClassInfo(seatClass);
+  const price =
+    seatClass === 'economy'
+      ? flight.economy_price
+      : seatClass === 'business'
+      ? flight.business_price
+      : flight.galaxium_price;
 
   const handleConfirmBooking = async () => {
     if (!user) {
@@ -33,6 +51,7 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
         user_id: user.user_id,
         name: user.name,
         flight_id: flight.flight_id,
+        seat_class: seatClass,
       });
 
       if (isErrorResponse(result)) {
@@ -110,6 +129,27 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
           </div>
         </div>
 
+        {/* Selected Seat Class */}
+        <div className={`p-4 rounded-lg ${classInfo.bgColor} border border-white/10`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{classInfo.icon}</span>
+              <div>
+                <p className="text-sm text-star-white/60">Selected Class</p>
+                <p className={`text-lg font-bold ${classInfo.color}`}>
+                  {classInfo.label}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-star-white/60">Price</p>
+              <p className="text-2xl font-bold text-alien-green">
+                {formatCurrency(price)}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Passenger Info */}
         {user && (
           <div className="glass-card p-4 bg-white/5">
@@ -121,14 +161,14 @@ export const BookingModal = ({ isOpen, onClose, flight, onSuccess }: BookingModa
           </div>
         )}
 
-        {/* Price */}
+        {/* Total Price */}
         <div className="flex items-center justify-between p-4 glass-card bg-cosmic-gradient">
           <div className="flex items-center gap-2">
             <DollarSign className="text-white" size={24} />
             <span className="text-white font-semibold">Total Price</span>
           </div>
           <span className="text-2xl font-bold text-white">
-            {formatCurrency(flight.price)}
+            {formatCurrency(price)}
           </span>
         </div>
 
