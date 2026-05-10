@@ -8,10 +8,11 @@ interface BookingCardProps {
   booking: Booking;
   flight?: Flight;
   onCancel: (bookingId: number) => void;
+  onModify?: (bookingId: number) => void;
   isCancelling?: boolean;
 }
 
-export const BookingCard = ({ booking, flight, onCancel, isCancelling }: BookingCardProps) => {
+export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling }: BookingCardProps) => {
   const getStatusIcon = () => {
     switch (booking.status) {
       case 'booked':
@@ -69,6 +70,7 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
   };
 
   const canCancel = booking.status === 'booked';
+  const canModify = booking.status === 'booked' && flight;
 
   return (
     <motion.div
@@ -153,7 +155,17 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
           <span>Booked on {formatDate(booking.booking_time)}</span>
         </div>
 
-        {/* Cancel Button */}
+        {/* Action Buttons */}
+        {canModify && onModify && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onModify(booking.booking_id)}
+            className="w-full mb-2"
+          >
+            Modify Booking
+          </Button>
+        )}
         {canCancel && (
           <Button
             variant="danger"

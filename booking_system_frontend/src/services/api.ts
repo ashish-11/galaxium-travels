@@ -6,6 +6,8 @@ import type {
   BookingRequest,
   UserRegistration,
   ErrorResponse,
+  ModifyBookingRequest,
+  ModifyBookingResponse,
 } from '../types';
 
 // Create axios instance with base configuration
@@ -97,6 +99,20 @@ export const cancelBooking = async (
 ): Promise<Booking | ErrorResponse> => {
   const response = await api.post<Booking | ErrorResponse>(
     `/cancel/${bookingId}`
+  );
+  return response.data;
+};
+
+/**
+ * Modify an existing booking
+ */
+export const modifyBooking = async (
+  bookingId: number,
+  data: ModifyBookingRequest
+): Promise<ModifyBookingResponse | ErrorResponse> => {
+  const response = await api.put<ModifyBookingResponse | ErrorResponse>(
+    `/modify/${bookingId}`,
+    data
   );
   return response.data;
 };

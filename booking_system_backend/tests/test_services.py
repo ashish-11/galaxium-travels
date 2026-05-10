@@ -338,4 +338,99 @@ class TestBookingService:
         )
         
         assert result.has_infant is False
+
+    def test_modify_booking_upgrade_class(self, db_session, sample_user, sample_flight):
+        """Test upgrading from economy to business class."""
+        # Create test booking
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "economy", False)
+        from schemas import BookingOut
+        assert isinstance(result, BookingOut)
+        booking_id = result.booking_id
+        
+        # Modify to business
+        modify_result = booking.modify_booking(db_session, booking_id, "business", False)
+        assert not isinstance(modify_result, ErrorResponse)
+        assert modify_result.booking.seat_class == "business"
+        assert modify_result.old_seat_class == "economy"
+        assert modify_result.new_seat_class == "business"
+        assert modify_result.price_difference > 0  # Should cost more
+
+    def test_modify_booking_downgrade_class(self, db_session, sample_user, sample_flight):
+        """Test downgrading from galaxium to economy class."""
+        from schemas import BookingOut
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "galaxium", False)
+        assert isinstance(result, BookingOut)
+        booking_id = result.booking_id
+        
+        modify_result = booking.modify_booking(db_session, booking_id, "economy", False)
+        assert not isinstance(modify_result, ErrorResponse)
+        assert modify_result.booking.seat_class == "economy"
+        assert modify_result.price_difference < 0  # Should get refund
+
+    def test_modify_booking_add_infant(self, db_session, sample_user, sample_flight):
+        """Test adding infant without changing class."""
+        from schemas import BookingOut
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "economy", False)
+        assert isinstance(result, BookingOut)
+        booking_id = result.booking_id
+        
+        modify_result = booking.modify_booking(db_session, booking_id, "economy", True)
+        assert not isinstance(modify_result, ErrorResponse)
+        assert modify_result.booking.has_infant is True
+        assert modify_result.price_difference == 0  # No price change
+
+    def test_modify_booking_not_found(self, db_session):
+        """Test modifying non-existent booking."""
+        result = booking.modify_booking(db_session, 99999, "business", False)
+        assert isinstance(result, ErrorResponse)
+        assert result.error_code == "BOOKING_NOT_FOUND"
+
+    def test_modify_booking_already_cancelled(self, db_session, sample_user, sample_flight):
+        """Test modifying cancelled booking."""
+        from schemas import BookingOut
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "economy", False)
+        assert isinstance(result, BookingOut)
+        booking_id = result.booking_id
+        
+        # Cancel it
+        booking.cancel_booking(db_session, booking_id)
+        
+        # Try to modify
+        modify_result = booking.modify_booking(db_session, booking_id, "business", False)
+        assert isinstance(modify_result, ErrorResponse)
+        assert modify_result.error_code == "BOOKING_NOT_MODIFIABLE"
+
+    def test_modify_booking_no_seats_available(self, db_session, sample_user, sample_flight):
+        """Test modifying when target class is full."""
+        from schemas import BookingOut
+        # Book all business seats (3 available in sample_flight)
+        booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "business", False)
+        
+        # Add more users for additional bookings
+        db_session.add(User(name="Bob Smith", email="bob@example.com"))
+        db_session.add(User(name="Charlie Brown", email="charlie@example.com"))
+        db_session.commit()
+        user2 = db_session.query(User).filter(User.email == "bob@example.com").first()
+        user3 = db_session.query(User).filter(User.email == "charlie@example.com").first()
+        
+        booking.book_flight(db_session, user2.user_id, user2.name, sample_flight.flight_id, "business", False)
+        booking.book_flight(db_session, user3.user_id, user3.name, sample_flight.flight_id, "business", False)
+        
+        # Try to upgrade economy to business (all business seats are now taken)
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "economy", False)
+        assert isinstance(result, BookingOut)
+        
+        modify_result = booking.modify_booking(db_session, result.booking_id, "business", False)
+        assert isinstance(modify_result, ErrorResponse)
+        assert modify_result.error_code == "NO_SEATS_AVAILABLE"
+
+    def test_modify_booking_invalid_seat_class(self, db_session, sample_user, sample_flight):
+        """Test modifying with invalid seat class."""
+        from schemas import BookingOut
+        result = booking.book_flight(db_session, sample_user.user_id, sample_user.name, sample_flight.flight_id, "economy", False)
+        assert isinstance(result, BookingOut)
+        
+        modify_result = booking.modify_booking(db_session, result.booking_id, "first_class", False)
+        assert isinstance(modify_result, ErrorResponse)
+        assert modify_result.error_code == "INVALID_SEAT_CLASS"
         assert result.status == "booked"

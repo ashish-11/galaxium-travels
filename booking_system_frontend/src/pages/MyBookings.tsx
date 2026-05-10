@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Booking, Flight } from '../types';
 import { LoadingSpinner, Modal, Button } from '../components/common';
 import { BookingCard } from '../components/bookings/BookingCard';
+import { ModifyBookingModal } from '../components/bookings/ModifyBookingModal';
 import { getUserBookings, getFlights, cancelBooking, isErrorResponse } from '../services/api';
 import { useUser } from '../hooks/useUser';
 import { AlertCircle } from 'lucide-react';
@@ -18,6 +19,9 @@ export const MyBookings = () => {
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [bookingToModify, setBookingToModify] = useState<Booking | null>(null);
+  const [flightToModify, setFlightToModify] = useState<Flight | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -73,6 +77,26 @@ export const MyBookings = () => {
       setCancellingId(null);
       setBookingToCancel(null);
     }
+  };
+
+  const handleModifyClick = (bookingId: number) => {
+    const booking = bookings.find(b => b.booking_id === bookingId);
+    const flight = booking ? getFlightForBooking(booking) : null;
+    
+    if (booking && flight) {
+      setBookingToModify(booking);
+      setFlightToModify(flight);
+      setShowModifyModal(true);
+    } else {
+      toast.error('Unable to modify booking - flight information not available');
+    }
+  };
+
+  const handleModifySuccess = () => {
+    setShowModifyModal(false);
+    setBookingToModify(null);
+    setFlightToModify(null);
+    loadData(); // Reload bookings
   };
 
   const getFlightForBooking = (booking: Booking): Flight | undefined => {
@@ -140,6 +164,7 @@ export const MyBookings = () => {
                     booking={booking}
                     flight={getFlightForBooking(booking)}
                     onCancel={handleCancelClick}
+                    onModify={handleModifyClick}
                     isCancelling={cancellingId === booking.booking_id}
                   />
                 ))}
@@ -201,6 +226,17 @@ export const MyBookings = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Modify Booking Modal */}
+      {showModifyModal && bookingToModify && flightToModify && (
+        <ModifyBookingModal
+          isOpen={showModifyModal}
+          onClose={() => setShowModifyModal(false)}
+          booking={bookingToModify}
+          flight={flightToModify}
+          onModifySuccess={handleModifySuccess}
+        />
+      )}
     </div>
   );
 };

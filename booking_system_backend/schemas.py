@@ -56,6 +56,21 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class ModifyBookingRequest(BaseModel):
+    new_seat_class: str  # 'economy', 'business', or 'galaxium'
+    has_infant: bool
+
+
+class ModifyBookingResponse(BaseModel):
+    booking: BookingOut
+    price_difference: int  # Positive = additional charge, Negative = refund
+    old_seat_class: str
+    new_seat_class: str
+    
+    class Config:
+        from_attributes = True
+
+
 class ErrorResponse(BaseModel):
     success: bool = False
     error: str

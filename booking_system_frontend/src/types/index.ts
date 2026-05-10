@@ -43,6 +43,18 @@ export interface BookingRequest {
   has_infant: boolean;
 }
 
+export interface ModifyBookingRequest {
+  new_seat_class: SeatClass;
+  has_infant: boolean;
+}
+
+export interface ModifyBookingResponse {
+  booking: Booking;
+  price_difference: number;  // Positive = charge, Negative = refund
+  old_seat_class: SeatClass;
+  new_seat_class: SeatClass;
+}
+
 export interface SeatClassOption {
   value: SeatClass;
   label: string;

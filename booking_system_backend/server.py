@@ -7,7 +7,7 @@ from typing import Union
 from db import SessionLocal, init_db, get_db
 from seed import seed
 from services import flight, user, booking
-from schemas import FlightOut, BookingOut, UserOut, ErrorResponse, BookingRequest, UserRegistration
+from schemas import FlightOut, BookingOut, UserOut, ErrorResponse, BookingRequest, UserRegistration, ModifyBookingRequest, ModifyBookingResponse
 
 
 # ==================== MCP SERVER (for AI agents) ====================
@@ -70,6 +70,27 @@ def cancel_booking(booking_id: int) -> BookingOut:
     db = SessionLocal()
     try:
         result = booking.cancel_booking(db, booking_id)
+        if isinstance(result, ErrorResponse):
+            raise Exception(result.details or result.error)
+        return result
+    finally:
+        db.close()
+
+
+@mcp.tool()
+def modify_booking(booking_id: int, new_seat_class: str, has_infant: bool) -> ModifyBookingResponse:
+    """Modify an existing booking's seat class and/or infant status.
+    
+    Args:
+        booking_id: The booking ID to modify
+        new_seat_class: New seat class - 'economy', 'business', or 'galaxium'
+        has_infant: Whether booking includes a lap infant
+    
+    Returns booking details with price difference information.
+    Raises error if booking cannot be modified."""
+    db = SessionLocal()
+    try:
+        result = booking.modify_booking(db, booking_id, new_seat_class, has_infant)
         if isinstance(result, ErrorResponse):
             raise Exception(result.details or result.error)
         return result
@@ -173,6 +194,15 @@ def cancel_booking_endpoint(booking_id: int, db: Session = Depends(get_db)):
     Increments available seats for the flight if successful.
     """
     return booking.cancel_booking(db, booking_id)
+
+
+@app.put("/modify/{booking_id}", response_model=Union[ModifyBookingResponse, ErrorResponse], tags=["Bookings"])
+def modify_booking_endpoint(booking_id: int, request: ModifyBookingRequest, db: Session = Depends(get_db)):
+    """Modify an existing booking's seat class and infant status.
+    
+    Returns booking details with price difference (positive = charge, negative = refund).
+    """
+    return booking.modify_booking(db, booking_id, request.new_seat_class, request.has_infant)
 
 
 @app.post("/register", response_model=Union[UserOut, ErrorResponse], tags=["Users"])
