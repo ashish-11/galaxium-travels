@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Flight, SeatClass } from '../../types';
 import { Modal, Button } from '../common';
-import { Plane, Calendar, Clock, DollarSign } from 'lucide-react';
+import { Plane, Calendar, Clock, DollarSign, Baby } from 'lucide-react';
 import { formatCurrency, formatDate, calculateDuration } from '../../utils/formatters';
 import { bookFlight, isErrorResponse } from '../../services/api';
 import { useUser } from '../../hooks/useUser';
@@ -18,6 +18,7 @@ interface BookingModalProps {
 export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: BookingModalProps) => {
   const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasInfant, setHasInfant] = useState(false);
 
   if (!flight || !seatClass) return null;
 
@@ -52,6 +53,7 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
         name: user.name,
         flight_id: flight.flight_id,
         seat_class: seatClass,
+        has_infant: hasInfant,
       });
 
       if (isErrorResponse(result)) {
@@ -59,7 +61,11 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
         return;
       }
 
-      toast.success('Flight booked successfully!');
+      toast.success(
+        hasInfant
+          ? 'Flight booked successfully with infant!'
+          : 'Flight booked successfully!'
+      );
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -150,6 +156,40 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
           </div>
         </div>
 
+        {/* Infant Selection */}
+        <div className="glass-card p-4 bg-white/5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Baby className="text-cosmic-purple" size={20} />
+              <h4 className="text-sm font-semibold text-star-white">
+                Traveling with Infant?
+              </h4>
+            </div>
+          </div>
+          
+          <p className="text-xs text-star-white/60 mb-3">
+            Lap infant under 2 years (free, no seat required)
+          </p>
+          
+          <button
+            onClick={() => setHasInfant(!hasInfant)}
+            className={`w-full p-3 rounded-lg border transition-all ${
+              hasInfant
+                ? 'border-cosmic-purple bg-cosmic-purple/20 text-star-white'
+                : 'border-white/10 bg-white/5 text-star-white/60 hover:border-white/20'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {hasInfant ? '✓ Infant included' : 'Add infant to booking'}
+              </span>
+              <span className="text-xs text-alien-green font-semibold">
+                FREE
+              </span>
+            </div>
+          </button>
+        </div>
+
         {/* Passenger Info */}
         {user && (
           <div className="glass-card p-4 bg-white/5">
@@ -165,7 +205,12 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
         <div className="flex items-center justify-between p-4 glass-card bg-cosmic-gradient">
           <div className="flex items-center gap-2">
             <DollarSign className="text-white" size={24} />
-            <span className="text-white font-semibold">Total Price</span>
+            <div>
+              <span className="text-white font-semibold">Total Price</span>
+              {hasInfant && (
+                <p className="text-xs text-white/80">+ 1 infant (free)</p>
+              )}
+            </div>
           </div>
           <span className="text-2xl font-bold text-white">
             {formatCurrency(price)}

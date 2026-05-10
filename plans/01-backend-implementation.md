@@ -1,197 +1,89 @@
-# Backend Implementation Plan: Seat Classes
+# Backend Implementation Plan: Infant Booking Feature
 
 ## Overview
-Implement three seat classes (Economy, Business, Galaxium) with proportional allocation and price multipliers.
-
-## Pricing Strategy
-- **Economy**: Base price (1x multiplier)
-- **Business**: 2x Economy price
-- **Galaxium**: 5x Economy price
-
-## Seat Allocation Strategy
-- **Economy**: 60% of total seats
-- **Business**: 30% of total seats
-- **Galaxium**: 10% of total seats
-
-Example: 10 total seats = 6 Economy, 3 Business, 1 Galaxium
-
----
+Add support for infant bookings (lap infants under 2 years) with the following requirements:
+- **Pricing**: Free (0% of adult fare)
+- **Seat Consumption**: No seat consumed (lap infant)
+- **Limit**: One infant per adult booking
 
 ## Database Schema Changes
 
-### 1. Update Flight Model
-**File**: [`booking_system_backend/models.py`](../booking_system_backend/models.py)
+### 1. Update Booking Model
+**File**: [`booking_system_backend/models.py`](../booking_system_backend/models.py:25)
 
-**Current Structure**:
+Add new column to `Booking` table:
 ```python
-class Flight(Base):
-    flight_id = Column(Integer, primary_key=True)
-    origin = Column(String, nullable=False)
-    destination = Column(String, nullable=False)
-    departure_time = Column(String, nullable=False)
-    arrival_time = Column(String, nullable=False)
-    price = Column(Integer, nullable=False)  # Single price
-    seats_available = Column(Integer, nullable=False)  # Total seats
+has_infant = Column(Boolean, default=False, nullable=False)
 ```
 
-**New Structure**:
-```python
-class Flight(Base):
-    flight_id = Column(Integer, primary_key=True)
-    origin = Column(String, nullable=False)
-    destination = Column(String, nullable=False)
-    departure_time = Column(String, nullable=False)
-    arrival_time = Column(String, nullable=False)
-    base_price = Column(Integer, nullable=False)  # Economy price
-    total_seats = Column(Integer, nullable=False)  # Total capacity
-    economy_seats_available = Column(Integer, nullable=False)
-    business_seats_available = Column(Integer, nullable=False)
-    galaxium_seats_available = Column(Integer, nullable=False)
-```
-
-**Migration Notes**:
-- Rename `price` → `base_price`
-- Rename `seats_available` → `total_seats`
-- Add three new columns for seat class availability
-- Calculate initial values: 60% economy, 30% business, 10% galaxium
-
-### 2. Update Booking Model
-**File**: [`booking_system_backend/models.py`](../booking_system_backend/models.py)
-
-**Add seat_class field**:
-```python
-class Booking(Base):
-    booking_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.user_id'))
-    flight_id = Column(Integer, ForeignKey('flights.flight_id'))
-    seat_class = Column(String, nullable=False)  # NEW: 'economy', 'business', 'galaxium'
-    status = Column(String, nullable=False)
-    booking_time = Column(String, nullable=False)
-```
-
----
+**Migration Strategy**: Since using SQLite with `init_db()`, the table will be recreated. For production with migrations:
+- Add column with default `False`
+- Existing bookings automatically get `has_infant=False`
 
 ## Schema Updates
 
-### 3. Update Pydantic Schemas
-**File**: [`booking_system_backend/schemas.py`](../booking_system_backend/schemas.py)
+### 2. Update BookingRequest Schema
+**File**: [`booking_system_backend/schemas.py`](../booking_system_backend/schemas.py:24)
 
-**FlightOut Schema**:
-```python
-class FlightOut(BaseModel):
-    flight_id: int
-    origin: str
-    destination: str
-    departure_time: str
-    arrival_time: str
-    base_price: int  # Economy price
-    economy_price: int  # Computed: base_price * 1
-    business_price: int  # Computed: base_price * 2
-    galaxium_price: int  # Computed: base_price * 5
-    total_seats: int
-    economy_seats_available: int
-    business_seats_available: int
-    galaxium_seats_available: int
-```
-
-**BookingRequest Schema**:
+Modify `BookingRequest` to include infant flag:
 ```python
 class BookingRequest(BaseModel):
     user_id: int
     name: str
     flight_id: int
-    seat_class: str  # NEW: 'economy', 'business', or 'galaxium'
+    seat_class: str  # 'economy', 'business', or 'galaxium'
+    has_infant: bool = False  # Optional, defaults to False
 ```
 
-**BookingOut Schema**:
+### 3. Update BookingOut Schema
+**File**: [`booking_system_backend/schemas.py`](../booking_system_backend/schemas.py:31)
+
+Add infant field to response:
 ```python
 class BookingOut(BaseModel):
     booking_id: int
     user_id: int
     flight_id: int
-    seat_class: str  # NEW
+    seat_class: str
     status: str
     booking_time: str
+    has_infant: bool  # New field
 ```
-
----
 
 ## Service Layer Changes
 
-### 4. Update Flight Service
-**File**: [`booking_system_backend/services/flight.py`](../booking_system_backend/services/flight.py)
+### 4. Update book_flight Service
+**File**: [`booking_system_backend/services/booking.py`](../booking_system_backend/services/booking.py:7)
 
-**Enhance list_flights**:
+Modify function signature and logic:
+
 ```python
-def list_flights(db: Session) -> list[FlightOut]:
-    flights = db.query(Flight).all()
-    result = []
-    for f in flights:
-        flight_dict = {
-            "flight_id": f.flight_id,
-            "origin": f.origin,
-            "destination": f.destination,
-            "departure_time": f.departure_time,
-            "arrival_time": f.arrival_time,
-            "base_price": f.base_price,
-            "economy_price": f.base_price,
-            "business_price": f.base_price * 2,
-            "galaxium_price": f.base_price * 5,
-            "total_seats": f.total_seats,
-            "economy_seats_available": f.economy_seats_available,
-            "business_seats_available": f.business_seats_available,
-            "galaxium_seats_available": f.galaxium_seats_available
-        }
-        result.append(FlightOut(**flight_dict))
-    return result
-```
-
-### 5. Update Booking Service
-**File**: [`booking_system_backend/services/booking.py`](../booking_system_backend/services/booking.py)
-
-**Update book_flight function**:
-```python
-def book_flight(db: Session, user_id: int, name: str, flight_id: int, seat_class: str) -> BookingOut | ErrorResponse:
-    # Validate seat_class
-    valid_classes = ['economy', 'business', 'galaxium']
-    if seat_class not in valid_classes:
-        return ErrorResponse(
-            error="Invalid seat class",
-            error_code="INVALID_SEAT_CLASS",
-            details=f"Seat class must be one of: {', '.join(valid_classes)}"
-        )
+def book_flight(
+    db: Session, 
+    user_id: int, 
+    name: str, 
+    flight_id: int, 
+    seat_class: str,
+    has_infant: bool = False
+) -> BookingOut | ErrorResponse:
+    """Book a seat on a specific flight for a user in a specific seat class.
     
-    # Check flight exists
-    flight = db.query(Flight).filter(Flight.flight_id == flight_id).first()
-    if not flight:
-        return ErrorResponse(...)
+    Optionally include a lap infant (free, no seat consumed).
+    """
+    # Existing validation logic remains unchanged
+    # ... (seat_class validation, flight check, user check)
     
-    # Check seats available for specific class
-    seats_field = f"{seat_class}_seats_available"
-    available_seats = getattr(flight, seats_field)
-    
-    if available_seats < 1:
-        return ErrorResponse(
-            error=f"No {seat_class} seats available",
-            error_code="NO_SEATS_AVAILABLE",
-            details=f"All {seat_class} class seats are booked."
-        )
-    
-    # Validate user (existing logic)
-    user = db.query(User).filter(User.user_id == user_id, User.name == name).first()
-    if not user:
-        return ErrorResponse(...)
-    
-    # Decrement appropriate seat count
+    # Decrement seat count (unchanged - infant doesn't consume seat)
     setattr(flight, seats_field, available_seats - 1)
     
-    # Create booking with seat_class
+    # Create booking with infant flag
     new_booking = Booking(
         user_id=user_id,
         flight_id=flight_id,
         seat_class=seat_class,
         status="booked",
-        booking_time=datetime.utcnow().isoformat()
+        booking_time=datetime.utcnow().isoformat(),
+        has_infant=has_infant  # New field
     )
     db.add(new_booking)
     db.commit()
@@ -199,191 +91,173 @@ def book_flight(db: Session, user_id: int, name: str, flight_id: int, seat_class
     return BookingOut.model_validate(new_booking)
 ```
 
-**Update cancel_booking function**:
-```python
-def cancel_booking(db: Session, booking_id: int) -> BookingOut | ErrorResponse:
-    booking = db.query(Booking).filter(Booking.booking_id == booking_id).first()
-    if not booking:
-        return ErrorResponse(...)
-    
-    if booking.status == "cancelled":
-        return ErrorResponse(...)
-    
-    # Restore seat to appropriate class
-    flight = db.query(Flight).filter(Flight.flight_id == booking.flight_id).first()
-    if flight:
-        seats_field = f"{booking.seat_class}_seats_available"
-        current_seats = getattr(flight, seats_field)
-        setattr(flight, seats_field, current_seats + 1)
-    
-    booking.status = "cancelled"
-    db.commit()
-    db.refresh(booking)
-    return BookingOut.model_validate(booking)
-```
+**Key Points**:
+- No seat availability check for infant
+- No seat decrement for infant
+- Infant flag stored in booking record
 
----
+## API Endpoint Updates
 
-## API Endpoint Changes
+### 5. Update MCP Tool
+**File**: [`booking_system_backend/server.py`](../booking_system_backend/server.py:31)
 
-### 6. Update REST Endpoints
-**File**: [`booking_system_backend/server.py`](../booking_system_backend/server.py)
-
-**Update POST /bookings endpoint**:
-```python
-@app.post("/bookings", response_model=BookingOut)
-async def create_booking(request: BookingRequest, db: Session = Depends(get_db)):
-    result = booking_service.book_flight(
-        db, 
-        request.user_id, 
-        request.name, 
-        request.flight_id,
-        request.seat_class  # NEW parameter
-    )
-    if isinstance(result, ErrorResponse):
-        raise HTTPException(status_code=400, detail=result.model_dump())
-    return result
-```
-
-### 7. Update MCP Tools
-**File**: [`booking_system_backend/server.py`](../booking_system_backend/server.py)
-
-**Update book_flight MCP tool**:
+Update MCP tool signature:
 ```python
 @mcp.tool()
-def book_flight(user_id: int, name: str, flight_id: int, seat_class: str) -> str:
-    """Book a seat on a flight for a user.
+def book_flight(
+    user_id: int, 
+    name: str, 
+    flight_id: int, 
+    seat_class: str,
+    has_infant: bool = False
+) -> BookingOut:
+    """Book a seat on a specific flight for a user in a specific seat class.
     
     Args:
         user_id: The user's ID
         name: The user's name (must match registered name)
         flight_id: The flight ID to book
         seat_class: Seat class - 'economy', 'business', or 'galaxium'
+        has_infant: Whether booking includes a lap infant (free, no seat)
+    
+    Decrements available seats for the specified class if successful.
+    Infant does not consume a seat.
+    Returns booking details or raises an error if booking is not possible.
     """
     db = SessionLocal()
     try:
-        result = booking_service.book_flight(db, user_id, name, flight_id, seat_class)
+        result = booking.book_flight(db, user_id, name, flight_id, seat_class, has_infant)
         if isinstance(result, ErrorResponse):
-            raise ValueError(f"{result.error}: {result.details}")
-        return f"Booking successful! Booking ID: {result.booking_id}, Class: {seat_class}"
+            raise Exception(result.details or result.error)
+        return result
     finally:
         db.close()
 ```
 
----
+### 6. Update REST Endpoint
+**File**: [`booking_system_backend/server.py`](../booking_system_backend/server.py) (REST section)
 
-## Seed Data Updates
-
-### 8. Update Seed Script
-**File**: [`booking_system_backend/seed.py`](../booking_system_backend/seed.py)
-
-**Update flight creation**:
+Update POST `/bookings` endpoint to accept `has_infant`:
 ```python
-def calculate_seat_distribution(total_seats: int) -> tuple[int, int, int]:
-    """Calculate 60/30/10 split for economy/business/galaxium."""
-    economy = int(total_seats * 0.6)
-    business = int(total_seats * 0.3)
-    galaxium = max(1, total_seats - economy - business)  # Ensure at least 1
-    return economy, business, galaxium
-
-flights = []
-flight_data = [
-    ("Earth", "Mars", "2099-01-01T09:00:00Z", "2099-01-01T17:00:00Z", 1000000, 10),
-    ("Earth", "Moon", "2099-01-02T10:00:00Z", "2099-01-02T14:00:00Z", 500000, 10),
-    # ... more flights
-]
-
-for origin, dest, dep, arr, base_price, total_seats in flight_data:
-    economy, business, galaxium = calculate_seat_distribution(total_seats)
-    flights.append(Flight(
-        origin=origin,
-        destination=dest,
-        departure_time=dep,
-        arrival_time=arr,
-        base_price=base_price,
-        total_seats=total_seats,
-        economy_seats_available=economy,
-        business_seats_available=business,
-        galaxium_seats_available=galaxium
-    ))
+@app.post("/bookings", response_model=BookingOut)
+async def create_booking(request: BookingRequest, db: Session = Depends(get_db)):
+    """Create a new booking with optional infant."""
+    result = booking.book_flight(
+        db, 
+        request.user_id, 
+        request.name, 
+        request.flight_id, 
+        request.seat_class,
+        request.has_infant  # Pass infant flag
+    )
+    if isinstance(result, ErrorResponse):
+        raise HTTPException(status_code=400, detail=result.model_dump())
+    return result
 ```
-
-**Update booking creation**:
-```python
-seat_classes = ['economy', 'business', 'galaxium']
-for i in range(20):
-    bookings.append(Booking(
-        user_id=random.choice(user_ids),
-        flight_id=random.choice(flight_ids),
-        seat_class=random.choice(seat_classes),  # NEW
-        status=random.choice(statuses),
-        booking_time=booking_time
-    ))
-```
-
----
 
 ## Testing Updates
 
-### 9. Update Test Suite
+### 7. Update Test Suite
 **File**: [`booking_system_backend/tests/test_services.py`](../booking_system_backend/tests/test_services.py)
 
-**Add new test cases**:
-- Test booking each seat class
-- Test seat class validation
-- Test seat availability per class
-- Test cancellation restores correct class
-- Test price calculation for each class
+Add new test cases:
 
-**Example test**:
 ```python
-def test_book_flight_with_seat_class(db_session):
-    # Create test flight with seat classes
-    flight = Flight(
-        origin="Earth",
-        destination="Mars",
-        departure_time="2099-01-01T09:00:00Z",
-        arrival_time="2099-01-01T17:00:00Z",
-        base_price=1000000,
-        total_seats=10,
-        economy_seats_available=6,
-        business_seats_available=3,
-        galaxium_seats_available=1
+def test_book_flight_with_infant(db_session, sample_user, sample_flight):
+    """Test booking with infant doesn't consume extra seat."""
+    initial_seats = sample_flight.economy_seats_available
+    
+    result = booking.book_flight(
+        db_session,
+        sample_user.user_id,
+        sample_user.name,
+        sample_flight.flight_id,
+        "economy",
+        has_infant=True
     )
-    db_session.add(flight)
-    db_session.commit()
     
-    # Test booking economy
-    result = book_flight(db_session, user.user_id, user.name, flight.flight_id, "economy")
     assert isinstance(result, BookingOut)
-    assert result.seat_class == "economy"
+    assert result.has_infant is True
     
-    # Verify seat count decreased
-    db_session.refresh(flight)
-    assert flight.economy_seats_available == 5
+    # Verify only one seat consumed (adult), not two
+    db_session.refresh(sample_flight)
+    assert sample_flight.economy_seats_available == initial_seats - 1
+
+def test_book_flight_without_infant(db_session, sample_user, sample_flight):
+    """Test booking without infant works as before."""
+    result = booking.book_flight(
+        db_session,
+        sample_user.user_id,
+        sample_user.name,
+        sample_flight.flight_id,
+        "economy",
+        has_infant=False
+    )
+    
+    assert isinstance(result, BookingOut)
+    assert result.has_infant is False
 ```
 
----
+**File**: [`booking_system_backend/tests/test_rest.py`](../booking_system_backend/tests/test_rest.py)
 
-## Implementation Order
+Add REST endpoint tests:
+```python
+def test_create_booking_with_infant(client, sample_user, sample_flight):
+    """Test POST /bookings with infant flag."""
+    response = client.post("/bookings", json={
+        "user_id": sample_user.user_id,
+        "name": sample_user.name,
+        "flight_id": sample_flight.flight_id,
+        "seat_class": "economy",
+        "has_infant": True
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["has_infant"] is True
+```
 
-1. **Database Models** - Update [`models.py`](../booking_system_backend/models.py)
-2. **Schemas** - Update [`schemas.py`](../booking_system_backend/schemas.py)
-3. **Services** - Update [`flight.py`](../booking_system_backend/services/flight.py) and [`booking.py`](../booking_system_backend/services/booking.py)
-4. **API Endpoints** - Update [`server.py`](../booking_system_backend/server.py)
-5. **Seed Data** - Update [`seed.py`](../booking_system_backend/seed.py)
-6. **Tests** - Update [`test_services.py`](../booking_system_backend/tests/test_services.py)
-7. **Database Migration** - Drop and recreate with `python seed.py`
+## Database Seeding
 
----
+### 8. Update Seed Data (Optional)
+**File**: [`booking_system_backend/seed.py`](../booking_system_backend/seed.py)
 
-## Backward Compatibility Notes
+Optionally add sample bookings with infants for testing:
+```python
+# Add sample booking with infant
+booking_with_infant = Booking(
+    user_id=1,
+    flight_id=1,
+    seat_class="economy",
+    status="booked",
+    booking_time=datetime.utcnow().isoformat(),
+    has_infant=True
+)
+db.add(booking_with_infant)
+```
 
-⚠️ **Breaking Changes**:
-- Database schema changes require recreation
-- API contracts change (new `seat_class` parameter required)
-- Existing bookings will need migration or recreation
+## Implementation Checklist
 
-**Migration Strategy**:
-- For demo/development: Drop and recreate database with seed script
-- For production: Would need proper migration script to preserve data
+- [ ] Update `Booking` model with `has_infant` column
+- [ ] Update `BookingRequest` schema with `has_infant` field
+- [ ] Update `BookingOut` schema with `has_infant` field
+- [ ] Modify `book_flight` service to accept and store `has_infant`
+- [ ] Update MCP tool signature and documentation
+- [ ] Update REST endpoint to handle `has_infant`
+- [ ] Add test cases for infant bookings
+- [ ] Update seed data (optional)
+- [ ] Test database migration/recreation
+- [ ] Verify backward compatibility (existing bookings default to `has_infant=False`)
+
+## Backward Compatibility
+
+**Existing Bookings**: When database is recreated, all existing bookings will have `has_infant=False` by default.
+
+**API Compatibility**: The `has_infant` parameter is optional with default `False`, so existing API calls continue to work without modification.
+
+## Notes
+
+- **No seat consumption**: Infants are lap infants and don't consume a seat from availability
+- **No pricing impact**: Infant bookings are free (0% of adult fare)
+- **One infant per booking**: Business logic doesn't enforce this at booking time, but frontend will control this
+- **Cancellation**: When booking with infant is cancelled, only the adult seat is restored (infant didn't consume one)

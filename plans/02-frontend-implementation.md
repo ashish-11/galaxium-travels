@@ -1,468 +1,361 @@
-# Frontend Implementation Plan: Seat Classes UI/UX
+# Frontend Implementation Plan: Infant Booking Feature
 
 ## Overview
-Update the React frontend to support seat class selection with visual differentiation and pricing display for Economy, Business, and Galaxium classes.
+Add UI support for booking flights with lap infants (free, no seat consumed, one per adult).
 
----
+## Type System Updates
 
-## TypeScript Type Updates
+### 1. Update TypeScript Interfaces
+**File**: [`booking_system_frontend/src/types/index.ts`](../booking_system_frontend/src/types/index.ts:21)
 
-### 1. Update Type Definitions
-**File**: [`booking_system_frontend/src/types/index.ts`](../booking_system_frontend/src/types/index.ts)
-
-**Update Flight interface**:
-```typescript
-export interface Flight {
-  flight_id: number;
-  origin: string;
-  destination: string;
-  departure_time: string;
-  arrival_time: string;
-  base_price: number;  // Changed from 'price'
-  economy_price: number;  // NEW
-  business_price: number;  // NEW
-  galaxium_price: number;  // NEW
-  total_seats: number;  // Changed from 'seats_available'
-  economy_seats_available: number;  // NEW
-  business_seats_available: number;  // NEW
-  galaxium_seats_available: number;  // NEW
-}
-```
-
-**Update Booking interface**:
+#### Update Booking Interface
 ```typescript
 export interface Booking {
   booking_id: number;
   user_id: number;
   flight_id: number;
-  seat_class: 'economy' | 'business' | 'galaxium';  // NEW
+  seat_class: SeatClass;
   status: 'booked' | 'cancelled' | 'completed';
   booking_time: string;
+  has_infant: boolean;  // New field
 }
 ```
 
-**Update BookingRequest interface**:
+#### Update BookingRequest Interface
 ```typescript
 export interface BookingRequest {
   user_id: number;
   name: string;
   flight_id: number;
-  seat_class: 'economy' | 'business' | 'galaxium';  // NEW
+  seat_class: SeatClass;
+  has_infant: boolean;  // New field
 }
 ```
 
-**Add new type for seat class selection**:
+## API Service Updates
+
+### 2. Update bookFlight Function
+**File**: [`booking_system_frontend/src/services/api.ts`](../booking_system_frontend/src/services/api.ts)
+
+Modify the `bookFlight` function to accept `has_infant`:
+
 ```typescript
-export type SeatClass = 'economy' | 'business' | 'galaxium';
-
-export interface SeatClassOption {
-  value: SeatClass;
-  label: string;
-  description: string;
-  priceMultiplier: number;
-  icon: string;  // Emoji or icon identifier
-}
-```
-
----
-
-## Component Updates
-
-### 2. Update FlightCard Component
-**File**: [`booking_system_frontend/src/components/flights/FlightCard.tsx`](../booking_system_frontend/src/components/flights/FlightCard.tsx)
-
-**Changes Required**:
-- Display all three seat classes with individual pricing
-- Show availability for each class
-- Visual indicators for class tiers (colors, icons)
-- Update "Book Now" button to open seat class selector
-
-**New Structure**:
-```typescript
-export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
-  const [selectedClass, setSelectedClass] = useState<SeatClass | null>(null);
-  
-  const seatClasses = [
-    {
-      type: 'economy' as SeatClass,
-      label: 'Economy',
-      price: flight.economy_price,
-      available: flight.economy_seats_available,
-      icon: '💺',
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-500/10'
-    },
-    {
-      type: 'business' as SeatClass,
-      label: 'Business',
-      price: flight.business_price,
-      available: flight.business_seats_available,
-      icon: '🛋️',
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-500/10'
-    },
-    {
-      type: 'galaxium' as SeatClass,
-      label: 'Galaxium',
-      price: flight.galaxium_price,
-      available: flight.galaxium_seats_available,
-      icon: '👑',
-      color: 'text-yellow-400',
-      bgColor: 'bg-yellow-500/10'
+export const bookFlight = async (
+  request: BookingRequest
+): Promise<Booking | ErrorResponse> => {
+  try {
+    const response = await fetch(`${API_URL}/bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),  // Now includes has_infant
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return data as ErrorResponse;
     }
-  ];
-  
-  const totalAvailable = flight.economy_seats_available + 
-                         flight.business_seats_available + 
-                         flight.galaxium_seats_available;
-  
-  return (
-    <Card>
-      {/* Route Header - unchanged */}
-      
-      {/* Flight Details - unchanged */}
-      
-      {/* NEW: Seat Class Selection */}
-      <div className="space-y-2 mb-4">
-        <h4 className="text-sm font-semibold text-star-white/80">
-          Select Class
-        </h4>
-        {seatClasses.map((seatClass) => (
-          <button
-            key={seatClass.type}
-            onClick={() => setSelectedClass(seatClass.type)}
-            disabled={seatClass.available === 0}
-            className={`w-full p-3 rounded-lg border-2 transition-all ${
-              selectedClass === seatClass.type
-                ? 'border-cosmic-purple bg-cosmic-purple/20'
-                : 'border-white/10 hover:border-white/30'
-            } ${seatClass.available === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{seatClass.icon}</span>
-                <div className="text-left">
-                  <p className={`font-semibold ${seatClass.color}`}>
-                    {seatClass.label}
-                  </p>
-                  <p className="text-xs text-star-white/60">
-                    {seatClass.available} seats available
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-star-white">
-                  {formatCurrency(seatClass.price)}
-                </p>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-      
-      {/* Book Button */}
-      <Button
-        onClick={() => selectedClass && onBook(flight, selectedClass)}
-        disabled={!selectedClass || totalAvailable === 0}
-        className="w-full"
-      >
-        {totalAvailable === 0 ? 'Sold Out' : 
-         !selectedClass ? 'Select a Class' : 
-         `Book ${selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)}`}
-      </Button>
-    </Card>
-  );
+    
+    return data as Booking;
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Network error',
+      error_code: 'NETWORK_ERROR',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 };
 ```
 
+## Component Updates
+
 ### 3. Update BookingModal Component
-**File**: [`booking_system_frontend/src/components/bookings/BookingModal.tsx`](../booking_system_frontend/src/components/bookings/BookingModal.tsx)
+**File**: [`booking_system_frontend/src/components/bookings/BookingModal.tsx`](../booking_system_frontend/src/components/bookings/BookingModal.tsx:18)
 
-**Changes Required**:
-- Accept `seatClass` parameter
-- Display selected class in confirmation
-- Show class-specific pricing
-- Pass `seat_class` to API
+Add infant selection UI and state management:
 
-**Updated Interface**:
 ```typescript
+import { useState } from 'react';
+import type { Flight, SeatClass } from '../../types';
+import { Modal, Button } from '../common';
+import { Plane, Calendar, Clock, DollarSign, Baby } from 'lucide-react';  // Add Baby icon
+import { formatCurrency, formatDate, calculateDuration } from '../../utils/formatters';
+import { bookFlight, isErrorResponse } from '../../services/api';
+import { useUser } from '../../hooks/useUser';
+import toast from 'react-hot-toast';
+
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   flight: Flight | null;
-  seatClass: SeatClass | null;  // NEW
-  onConfirm: (flightId: number, seatClass: SeatClass) => void;  // Updated
+  seatClass: SeatClass | null;
+  onSuccess: () => void;
 }
-```
 
-**Modal Content Updates**:
-```typescript
-<div className="space-y-4">
-  {/* Flight Details */}
-  <div>
-    <h3 className="text-xl font-bold">
-      {flight.origin} → {flight.destination}
-    </h3>
-  </div>
-  
-  {/* NEW: Selected Class Display */}
-  <div className="p-4 rounded-lg bg-cosmic-gradient/20 border border-white/10">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-star-white/60">Selected Class</p>
-        <p className="text-lg font-bold text-cosmic-purple">
-          {seatClass?.charAt(0).toUpperCase() + seatClass?.slice(1)}
+export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: BookingModalProps) => {
+  const { user } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasInfant, setHasInfant] = useState(false);  // New state
+
+  if (!flight || !seatClass) return null;
+
+  // ... existing getSeatClassInfo and classInfo code ...
+
+  const price =
+    seatClass === 'economy'
+      ? flight.economy_price
+      : seatClass === 'business'
+      ? flight.business_price
+      : flight.galaxium_price;
+
+  const handleConfirmBooking = async () => {
+    if (!user) {
+      toast.error('Please sign in to book a flight');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await bookFlight({
+        user_id: user.user_id,
+        name: user.name,
+        flight_id: flight.flight_id,
+        seat_class: seatClass,
+        has_infant: hasInfant,  // Include infant flag
+      });
+
+      if (isErrorResponse(result)) {
+        toast.error(result.details || result.error);
+        return;
+      }
+
+      toast.success(
+        hasInfant 
+          ? 'Flight booked successfully with infant!' 
+          : 'Flight booked successfully!'
+      );
+      onSuccess();
+      onClose();
+    } catch (error: any) {
+      toast.error(error.details || error.error || 'Failed to book flight');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Confirm Your Booking"
+      size="md"
+    >
+      <div className="space-y-6">
+        {/* Flight Summary - existing code */}
+        
+        {/* Selected Seat Class - existing code */}
+
+        {/* NEW: Infant Selection */}
+        <div className="glass-card p-4 bg-white/5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Baby className="text-cosmic-purple" size={20} />
+              <h4 className="text-sm font-semibold text-star-white">
+                Traveling with Infant?
+              </h4>
+            </div>
+          </div>
+          
+          <p className="text-xs text-star-white/60 mb-3">
+            Lap infant under 2 years (free, no seat required)
+          </p>
+          
+          <button
+            onClick={() => setHasInfant(!hasInfant)}
+            className={`w-full p-3 rounded-lg border transition-all ${
+              hasInfant
+                ? 'border-cosmic-purple bg-cosmic-purple/20 text-star-white'
+                : 'border-white/10 bg-white/5 text-star-white/60 hover:border-white/20'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">
+                {hasInfant ? '✓ Infant included' : 'Add infant to booking'}
+              </span>
+              <span className="text-xs text-alien-green font-semibold">
+                FREE
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* Passenger Info - existing code */}
+
+        {/* Total Price */}
+        <div className="flex items-center justify-between p-4 glass-card bg-cosmic-gradient">
+          <div className="flex items-center gap-2">
+            <DollarSign className="text-white" size={24} />
+            <div>
+              <span className="text-white font-semibold">Total Price</span>
+              {hasInfant && (
+                <p className="text-xs text-white/80">+ 1 infant (free)</p>
+              )}
+            </div>
+          </div>
+          <span className="text-2xl font-bold text-white">
+            {formatCurrency(price)}
+          </span>
+        </div>
+
+        {/* Actions - existing code */}
+        
+        <p className="text-xs text-star-white/60 text-center">
+          By confirming, you agree to our terms and conditions
         </p>
       </div>
-      <div className="text-right">
-        <p className="text-sm text-star-white/60">Price</p>
-        <p className="text-2xl font-bold text-alien-green">
-          {formatCurrency(
-            seatClass === 'economy' ? flight.economy_price :
-            seatClass === 'business' ? flight.business_price :
-            flight.galaxium_price
-          )}
-        </p>
-      </div>
-    </div>
-  </div>
-  
-  {/* Departure/Arrival times - unchanged */}
-  
-  {/* Confirm Button */}
-  <Button
-    onClick={() => onConfirm(flight.flight_id, seatClass!)}
-    className="w-full"
-  >
-    Confirm Booking
-  </Button>
-</div>
+    </Modal>
+  );
+};
+
+// Made with Bob
 ```
 
 ### 4. Update BookingCard Component
 **File**: [`booking_system_frontend/src/components/bookings/BookingCard.tsx`](../booking_system_frontend/src/components/bookings/BookingCard.tsx)
 
-**Changes Required**:
-- Display seat class badge
-- Show class-specific pricing
-- Visual differentiation by class
+Display infant indicator on booking cards:
 
-**Add Class Badge**:
 ```typescript
-const getClassBadge = (seatClass: SeatClass) => {
-  const badges = {
-    economy: { icon: '💺', label: 'Economy', color: 'bg-blue-500/20 text-blue-400' },
-    business: { icon: '🛋️', label: 'Business', color: 'bg-purple-500/20 text-purple-400' },
-    galaxium: { icon: '👑', label: 'Galaxium', color: 'bg-yellow-500/20 text-yellow-400' }
-  };
-  
-  const badge = badges[seatClass];
-  return (
-    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold ${badge.color}`}>
-      <span>{badge.icon}</span>
-      {badge.label}
+import { Baby } from 'lucide-react';  // Add Baby icon import
+
+// Inside the BookingCard component, add infant indicator:
+
+{/* Add after seat class badge */}
+{booking.has_infant && (
+  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cosmic-purple/20 border border-cosmic-purple/30">
+    <Baby size={14} className="text-cosmic-purple" />
+    <span className="text-xs text-cosmic-purple font-medium">
+      + Infant
     </span>
+  </div>
+)}
+```
+
+Full updated component structure:
+```typescript
+export const BookingCard = ({ booking, flight, onCancel }: BookingCardProps) => {
+  // ... existing code ...
+
+  return (
+    <Card className="hover:scale-[1.02] transition-transform">
+      <div className="space-y-4">
+        {/* Header with flight info */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Plane className="text-cosmic-purple" size={20} />
+              <h3 className="text-lg font-bold text-star-white">
+                {flight?.origin} → {flight?.destination}
+              </h3>
+            </div>
+            
+            {/* Badges row */}
+            <div className="flex flex-wrap gap-2">
+              {/* Seat class badge */}
+              <div className={`px-3 py-1 rounded-full ${classInfo.bgColor} border border-white/10`}>
+                <span className={`text-sm font-medium ${classInfo.color}`}>
+                  {classInfo.icon} {classInfo.label}
+                </span>
+              </div>
+              
+              {/* NEW: Infant badge */}
+              {booking.has_infant && (
+                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cosmic-purple/20 border border-cosmic-purple/30">
+                  <Baby size={14} className="text-cosmic-purple" />
+                  <span className="text-xs text-cosmic-purple font-medium">
+                    + Infant
+                  </span>
+                </div>
+              )}
+              
+              {/* Status badge */}
+              <div className={`px-3 py-1 rounded-full ${statusInfo.bgColor} border border-white/10`}>
+                <span className={`text-sm font-medium ${statusInfo.color}`}>
+                  {statusInfo.label}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rest of existing component code */}
+      </div>
+    </Card>
   );
 };
 
-// In component render:
-<div className="flex items-center justify-between mb-2">
-  <h3 className="text-lg font-bold">
-    {booking.flight?.origin} → {booking.flight?.destination}
-  </h3>
-  {getClassBadge(booking.seat_class)}
-</div>
-```
-
----
-
-## Page Updates
-
-### 5. Update Flights Page
-**File**: [`booking_system_frontend/src/pages/Flights.tsx`](../booking_system_frontend/src/pages/Flights.tsx)
-
-**Changes Required**:
-- Update state to track selected seat class
-- Pass seat class to booking modal
-- Update booking API call
-
-**State Updates**:
-```typescript
-const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
-const [selectedSeatClass, setSelectedSeatClass] = useState<SeatClass | null>(null);  // NEW
-const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-
-const handleBookClick = (flight: Flight, seatClass: SeatClass) => {
-  setSelectedFlight(flight);
-  setSelectedSeatClass(seatClass);  // NEW
-  setIsBookingModalOpen(true);
-};
-
-const handleConfirmBooking = async (flightId: number, seatClass: SeatClass) => {
-  if (!user) return;
-  
-  try {
-    await api.post('/bookings', {
-      user_id: user.user_id,
-      name: user.name,
-      flight_id: flightId,
-      seat_class: seatClass  // NEW
-    });
-    
-    // Refresh flights to update availability
-    fetchFlights();
-    setIsBookingModalOpen(false);
-    // Show success message
-  } catch (error) {
-    // Handle error
-  }
-};
-```
-
-**Component Render**:
-```typescript
-<FlightCard
-  key={flight.flight_id}
-  flight={flight}
-  onBook={handleBookClick}  // Now passes (flight, seatClass)
-/>
-
-<BookingModal
-  isOpen={isBookingModalOpen}
-  onClose={() => setIsBookingModalOpen(false)}
-  flight={selectedFlight}
-  seatClass={selectedSeatClass}  // NEW
-  onConfirm={handleConfirmBooking}
-/>
-```
-
-### 6. Update MyBookings Page
-**File**: [`booking_system_frontend/src/pages/MyBookings.tsx`](../booking_system_frontend/src/pages/MyBookings.tsx)
-
-**Changes Required**:
-- Display seat class in booking cards
-- Filter by seat class (optional enhancement)
-- Show class-specific details
-
-**Optional Filter Addition**:
-```typescript
-const [classFilter, setClassFilter] = useState<SeatClass | 'all'>('all');
-
-const filteredBookings = bookings.filter(booking => 
-  classFilter === 'all' || booking.seat_class === classFilter
-);
-
-// Filter UI
-<div className="flex gap-2 mb-4">
-  <Button onClick={() => setClassFilter('all')}>All</Button>
-  <Button onClick={() => setClassFilter('economy')}>Economy</Button>
-  <Button onClick={() => setClassFilter('business')}>Business</Button>
-  <Button onClick={() => setClassFilter('galaxium')}>Galaxium</Button>
-</div>
-```
-
----
-
-## API Service Updates
-
-### 7. Update API Service
-**File**: [`booking_system_frontend/src/services/api.ts`](../booking_system_frontend/src/services/api.ts)
-
-**No changes required** - The API service uses generic axios calls, so it will automatically handle the new `seat_class` field in requests and responses.
-
----
-
-## Styling Enhancements
-
-### 8. Add Class-Specific Styling
-**File**: [`booking_system_frontend/src/index.css`](../booking_system_frontend/src/index.css) or component styles
-
-**Add custom colors for seat classes**:
-```css
-/* Seat Class Colors */
-.seat-economy {
-  @apply bg-blue-500/10 border-blue-500/30 text-blue-400;
-}
-
-.seat-business {
-  @apply bg-purple-500/10 border-purple-500/30 text-purple-400;
-}
-
-.seat-galaxium {
-  @apply bg-yellow-500/10 border-yellow-500/30 text-yellow-400;
-}
-
-/* Class badges */
-.badge-economy {
-  @apply bg-blue-500/20 text-blue-400 border border-blue-500/40;
-}
-
-.badge-business {
-  @apply bg-purple-500/20 text-purple-400 border border-purple-500/40;
-}
-
-.badge-galaxium {
-  @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/40;
-}
-```
-
----
-
-## Visual Design Guidelines
-
-### Class Differentiation
-- **Economy** 💺: Blue theme, standard icon
-- **Business** 🛋️: Purple theme, premium icon
-- **Galaxium** 👑: Gold/Yellow theme, luxury icon
-
-### UI Patterns
-1. **Flight Cards**: Show all three classes with availability
-2. **Selection State**: Clear visual feedback for selected class
-3. **Pricing Display**: Prominent, easy to compare
-4. **Availability Indicators**: Color-coded (green = available, orange = low, red = sold out)
-5. **Booking Confirmation**: Large, clear display of selected class and price
-
-### Responsive Design
-- Mobile: Stack seat class options vertically
-- Tablet/Desktop: Display in grid or horizontal layout
-- Ensure touch targets are adequate (min 44px)
-
----
-
-## Implementation Order
-
-1. **Types** - Update [`types/index.ts`](../booking_system_frontend/src/types/index.ts)
-2. **FlightCard** - Update [`FlightCard.tsx`](../booking_system_frontend/src/components/flights/FlightCard.tsx)
-3. **BookingModal** - Update [`BookingModal.tsx`](../booking_system_frontend/src/components/bookings/BookingModal.tsx)
-4. **BookingCard** - Update [`BookingCard.tsx`](../booking_system_frontend/src/components/bookings/BookingCard.tsx)
-5. **Flights Page** - Update [`Flights.tsx`](../booking_system_frontend/src/pages/Flights.tsx)
-6. **MyBookings Page** - Update [`MyBookings.tsx`](../booking_system_frontend/src/pages/MyBookings.tsx)
-7. **Styling** - Add custom CSS if needed
-
----
-
-## Testing Checklist
-
-- [ ] All three seat classes display correctly
-- [ ] Prices calculate correctly (1x, 2x, 5x)
-- [ ] Seat availability updates after booking
-- [ ] Cannot book sold-out classes
-- [ ] Selected class persists through booking flow
-- [ ] Booking confirmation shows correct class and price
-- [ ] My Bookings displays seat class badges
-- [ ] Responsive design works on mobile/tablet/desktop
-- [ ] Error handling for invalid seat class
-- [ ] Visual feedback for selection states
-
----
-
-## Accessibility Considerations
-
-- Use semantic HTML for seat class selection
-- Ensure color is not the only indicator (use icons + text)
-- Keyboard navigation for seat class selection
-- Screen reader announcements for availability changes
-- ARIA labels for interactive elements
-- Focus management in modal dialogs
-
 // Made with Bob
+```
+
+## Visual Design Considerations
+
+### Color Scheme
+- **Infant indicator**: Use cosmic-purple theme to match existing design
+- **Free badge**: Use alien-green to highlight the free benefit
+- **Icon**: Baby/infant icon from lucide-react
+
+### UI/UX Guidelines
+
+1. **Booking Modal**:
+   - Place infant selection after seat class selection
+   - Use toggle button for clear on/off state
+   - Show "FREE" prominently to encourage usage
+   - Display infant count in total price section
+
+2. **Booking Card**:
+   - Show infant badge alongside seat class badge
+   - Use compact design to avoid cluttering
+   - Make it visually distinct but not overwhelming
+
+3. **Accessibility**:
+   - Ensure toggle button has clear focus states
+   - Use semantic HTML for screen readers
+   - Provide clear labels and descriptions
+
+## Implementation Checklist
+
+- [ ] Update `Booking` interface with `has_infant` field
+- [ ] Update `BookingRequest` interface with `has_infant` field
+- [ ] Modify `bookFlight` API function (no changes needed, just passes through)
+- [ ] Add infant selection UI to `BookingModal`
+- [ ] Add infant state management to `BookingModal`
+- [ ] Update booking confirmation logic to include `has_infant`
+- [ ] Add infant indicator to `BookingCard`
+- [ ] Import `Baby` icon from lucide-react
+- [ ] Test infant booking flow end-to-end
+- [ ] Verify infant indicator displays correctly on booking cards
+- [ ] Test with and without infant selections
+
+## Testing Scenarios
+
+1. **Book flight without infant**: Verify existing flow works unchanged
+2. **Book flight with infant**: Verify infant flag is sent and stored
+3. **View booking with infant**: Verify infant badge displays on card
+4. **Cancel booking with infant**: Verify cancellation works normally
+5. **Toggle infant selection**: Verify UI updates correctly
+6. **Price display**: Verify total shows same price with/without infant
+
+## Backward Compatibility
+
+**Existing Bookings**: Bookings without `has_infant` field will default to `false` in TypeScript, displaying no infant badge.
+
+**API Compatibility**: The frontend sends `has_infant: false` by default, maintaining compatibility with backend.
+
+## Notes
+
+- **No validation needed**: Backend doesn't enforce one-infant-per-booking rule; frontend controls this through UI
+- **No price calculation**: Infant is always free, so no price logic changes needed
+- **Simple toggle**: Single boolean state, no complex form validation required
+- **Visual consistency**: Use existing design system colors and components

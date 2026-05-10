@@ -1,6 +1,6 @@
 import type { Booking, Flight, SeatClass } from '../../types';
 import { Card, Button } from '../common';
-import { Plane, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plane, Calendar, CheckCircle, XCircle, Clock, Baby } from 'lucide-react';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { motion } from 'framer-motion';
 
@@ -106,7 +106,17 @@ export const BookingCard = ({ booking, flight, onCancel, isCancelling }: Booking
                 </h3>
                 <p className="text-sm text-star-white/60">Flight #{flight.flight_id}</p>
               </div>
-              {getSeatClassBadge(booking.seat_class)}
+              <div className="flex flex-wrap gap-2 justify-end">
+                {getSeatClassBadge(booking.seat_class)}
+                {booking.has_infant && (
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cosmic-purple/20 border border-cosmic-purple/30">
+                    <Baby size={14} className="text-cosmic-purple" />
+                    <span className="text-xs text-cosmic-purple font-medium">
+                      + Infant
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

@@ -97,3 +97,35 @@ def sample_booking_data():
         "name": "Test User",
         "flight_id": 1
     }
+
+
+@pytest.fixture
+def sample_user(db_session):
+    """Create and return a sample user in the database."""
+    from models import User
+    user = User(name="Test User", email="test@example.com")
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def sample_flight(db_session):
+    """Create and return a sample flight in the database."""
+    from models import Flight
+    flight = Flight(
+        origin="Earth",
+        destination="Mars",
+        departure_time="2099-01-01T09:00:00Z",
+        arrival_time="2099-01-01T17:00:00Z",
+        base_price=1000000,
+        total_seats=10,
+        economy_seats_available=6,
+        business_seats_available=3,
+        galaxium_seats_available=1
+    )
+    db_session.add(flight)
+    db_session.commit()
+    db_session.refresh(flight)
+    return flight

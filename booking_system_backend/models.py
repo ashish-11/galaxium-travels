@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -30,3 +30,4 @@ class Booking(Base):
     seat_class = Column(String, nullable=False)  # 'economy', 'business', 'galaxium'
     status = Column(String, nullable=False)
     booking_time = Column(String, nullable=False)
+    has_infant = Column(Boolean, default=False, nullable=False)

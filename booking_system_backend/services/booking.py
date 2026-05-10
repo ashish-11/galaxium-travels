@@ -4,8 +4,11 @@ from models import User, Flight, Booking
 from schemas import BookingOut, ErrorResponse
 
 
-def book_flight(db: Session, user_id: int, name: str, flight_id: int, seat_class: str) -> BookingOut | ErrorResponse:
-    """Book a seat on a specific flight for a user in a specific seat class."""
+def book_flight(db: Session, user_id: int, name: str, flight_id: int, seat_class: str, has_infant: bool = False) -> BookingOut | ErrorResponse:
+    """Book a seat on a specific flight for a user in a specific seat class.
+    
+    Optionally include a lap infant (free, no seat consumed).
+    """
     # Validate seat_class
     valid_classes = ['economy', 'business', 'galaxium']
     if seat_class not in valid_classes:
@@ -61,7 +64,8 @@ def book_flight(db: Session, user_id: int, name: str, flight_id: int, seat_class
         flight_id=flight_id,
         seat_class=seat_class,
         status="booked",
-        booking_time=datetime.utcnow().isoformat()
+        booking_time=datetime.utcnow().isoformat(),
+        has_infant=has_infant
     )
     db.add(new_booking)
     db.commit()

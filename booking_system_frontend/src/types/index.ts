@@ -25,6 +25,7 @@ export interface Booking {
   seat_class: SeatClass;
   status: 'booked' | 'cancelled' | 'completed';
   booking_time: string;
+  has_infant: boolean;
 }
 
 export interface User {
@@ -39,6 +40,7 @@ export interface BookingRequest {
   name: string;
   flight_id: number;
   seat_class: SeatClass;
+  has_infant: boolean;
 }
 
 export interface SeatClassOption {

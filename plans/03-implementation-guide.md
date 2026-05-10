@@ -1,603 +1,508 @@
-# Implementation Guide: Seat Classes Feature
+# Implementation Guide: Infant Booking Feature
 
-## Executive Summary
+## Overview
+This guide provides step-by-step instructions for implementing the infant booking feature across the full stack. Follow the order specified to ensure smooth integration.
 
-This document provides a comprehensive guide for implementing three seat classes (Economy, Business, Galaxium) in the Galaxium Travels booking system.
+## Prerequisites
+- Backend server stopped
+- Frontend development server stopped
+- Git working directory clean (recommended)
+- Database backup (if needed)
 
-**Key Specifications**:
-- **Seat Classes**: Economy (💺), Business (🛋️), Galaxium (👑)
-- **Pricing**: Economy = base price, Business = 2x, Galaxium = 5x
-- **Allocation**: 60% Economy, 30% Business, 10% Galaxium
-- **Example**: 10 total seats = 6 Economy, 3 Business, 1 Galaxium
+## Implementation Order
 
----
+### Phase 1: Backend Implementation (60 minutes)
 
-## Architecture Overview
+#### Step 1: Update Database Models (10 min)
+**File**: [`booking_system_backend/models.py`](../booking_system_backend/models.py:25)
 
-```mermaid
-graph TB
-    subgraph Frontend
-        A[FlightCard Component] --> B[Seat Class Selector]
-        B --> C[BookingModal]
-        C --> D[API Service]
-    end
-    
-    subgraph Backend
-        D --> E[REST Endpoint]
-        E --> F[Booking Service]
-        F --> G[Database]
-    end
-    
-    subgraph Database
-        G --> H[Flight Table]
-        G --> I[Booking Table]
-        H --> J[economy_seats_available]
-        H --> K[business_seats_available]
-        H --> L[galaxium_seats_available]
-        I --> M[seat_class field]
-    end
+1. Add `has_infant` column to `Booking` model:
+```python
+has_infant = Column(Boolean, default=False, nullable=False)
 ```
 
----
+2. Position: After `booking_time` column (line 32)
 
-## Implementation Phases
+**Verification**: Run `python -c "from models import Booking; print(Booking.__table__.columns.keys())"` to verify column exists.
 
-### Phase 1: Backend Foundation (Day 1-2)
+#### Step 2: Update Pydantic Schemas (10 min)
+**File**: [`booking_system_backend/schemas.py`](../booking_system_backend/schemas.py)
 
-#### Step 1.1: Database Schema Migration
-**Priority**: CRITICAL - Must be done first
-
-1. **Backup existing data** (if in production)
-2. **Update models.py**:
-   - Modify `Flight` model: add seat class columns
-   - Modify `Booking` model: add `seat_class` field
-3. **Drop and recreate database** (development):
-   ```bash
-   cd booking_system_backend
-   python seed.py
-   ```
-
-**Files to modify**:
-- [`booking_system_backend/models.py`](../booking_system_backend/models.py)
-
-**Verification**:
-```bash
-# Check database schema
-sqlite3 booking_system.db ".schema flights"
-sqlite3 booking_system.db ".schema bookings"
+1. Update `BookingRequest` (line 24):
+```python
+class BookingRequest(BaseModel):
+    user_id: int
+    name: str
+    flight_id: int
+    seat_class: str
+    has_infant: bool = False  # Add this line
 ```
 
-#### Step 1.2: Update Schemas
-**Priority**: HIGH - Required for API contracts
+2. Update `BookingOut` (line 31):
+```python
+class BookingOut(BaseModel):
+    booking_id: int
+    user_id: int
+    flight_id: int
+    seat_class: str
+    status: str
+    booking_time: str
+    has_infant: bool  # Add this line
+```
 
-1. Update `FlightOut` schema with new fields
-2. Update `BookingRequest` to include `seat_class`
-3. Update `BookingOut` to include `seat_class`
+**Verification**: Run `python -c "from schemas import BookingRequest, BookingOut; print(BookingRequest.model_fields.keys()); print(BookingOut.model_fields.keys())"`.
 
-**Files to modify**:
-- [`booking_system_backend/schemas.py`](../booking_system_backend/schemas.py)
+#### Step 3: Update Booking Service (15 min)
+**File**: [`booking_system_backend/services/booking.py`](../booking_system_backend/services/booking.py:7)
 
-#### Step 1.3: Update Services
-**Priority**: HIGH - Core business logic
+1. Update function signature (line 7):
+```python
+def book_flight(
+    db: Session, 
+    user_id: int, 
+    name: str, 
+    flight_id: int, 
+    seat_class: str,
+    has_infant: bool = False  # Add this parameter
+) -> BookingOut | ErrorResponse:
+```
 
-1. **Flight Service**:
-   - Modify `list_flights()` to calculate prices for each class
-   - Return all seat availability fields
+2. Update docstring (line 8):
+```python
+"""Book a seat on a specific flight for a user in a specific seat class.
+    
+Optionally include a lap infant (free, no seat consumed).
+"""
+```
 
-2. **Booking Service**:
-   - Update `book_flight()` to accept `seat_class` parameter
-   - Add seat class validation
-   - Decrement correct seat class counter
-   - Update `cancel_booking()` to restore correct seat class
+3. Update booking creation (line 59):
+```python
+new_booking = Booking(
+    user_id=user_id,
+    flight_id=flight_id,
+    seat_class=seat_class,
+    status="booked",
+    booking_time=datetime.utcnow().isoformat(),
+    has_infant=has_infant  # Add this line
+)
+```
 
-**Files to modify**:
-- [`booking_system_backend/services/flight.py`](../booking_system_backend/services/flight.py)
-- [`booking_system_backend/services/booking.py`](../booking_system_backend/services/booking.py)
+**Verification**: Check function signature matches expected parameters.
 
-#### Step 1.4: Update API Endpoints
-**Priority**: HIGH - External interface
+#### Step 4: Update API Endpoints (15 min)
+**File**: [`booking_system_backend/server.py`](../booking_system_backend/server.py)
 
-1. Update REST endpoints in `server.py`
-2. Update MCP tools to accept `seat_class`
-3. Update error handling for invalid seat classes
+1. Update MCP tool (line 31):
+```python
+@mcp.tool()
+def book_flight(
+    user_id: int, 
+    name: str, 
+    flight_id: int, 
+    seat_class: str,
+    has_infant: bool = False  # Add this parameter
+) -> BookingOut:
+    """Book a seat on a specific flight for a user in a specific seat class.
+    
+    Args:
+        user_id: The user's ID
+        name: The user's name (must match registered name)
+        flight_id: The flight ID to book
+        seat_class: Seat class - 'economy', 'business', or 'galaxium'
+        has_infant: Whether booking includes a lap infant (free, no seat)
+    
+    Decrements available seats for the specified class if successful.
+    Infant does not consume a seat.
+    Returns booking details or raises an error if booking is not possible.
+    """
+    db = SessionLocal()
+    try:
+        result = booking.book_flight(
+            db, user_id, name, flight_id, seat_class, has_infant  # Add parameter
+        )
+        if isinstance(result, ErrorResponse):
+            raise Exception(result.details or result.error)
+        return result
+    finally:
+        db.close()
+```
 
-**Files to modify**:
-- [`booking_system_backend/server.py`](../booking_system_backend/server.py)
+2. Find REST endpoint (search for `@app.post("/bookings")`):
+```python
+@app.post("/bookings", response_model=BookingOut)
+async def create_booking(request: BookingRequest, db: Session = Depends(get_db)):
+    """Create a new booking with optional infant."""
+    result = booking.book_flight(
+        db, 
+        request.user_id, 
+        request.name, 
+        request.flight_id, 
+        request.seat_class,
+        request.has_infant  # Add this line
+    )
+    if isinstance(result, ErrorResponse):
+        raise HTTPException(status_code=400, detail=result.model_dump())
+    return result
+```
 
-#### Step 1.5: Update Seed Data
-**Priority**: MEDIUM - For testing
+**Verification**: Check both MCP and REST endpoints accept `has_infant` parameter.
 
-1. Add seat distribution calculation function
-2. Update flight creation with seat class fields
-3. Update booking creation with random seat classes
+#### Step 5: Recreate Database (5 min)
 
-**Files to modify**:
-- [`booking_system_backend/seed.py`](../booking_system_backend/seed.py)
-
-**Testing Phase 1**:
+1. Stop backend server if running
+2. Delete existing database:
 ```bash
-# Run backend tests
 cd booking_system_backend
-pytest tests/ -v
+rm -f booking_system.db  # or del booking_system.db on Windows
+```
 
-# Manual API testing
-curl http://localhost:8080/flights
+3. Start server to recreate database:
+```bash
+python server.py
+```
+
+4. Database will be automatically recreated with new schema and seeded with sample data
+
+**Verification**: Check server logs for "Database initialized" and "Database seeded" messages.
+
+#### Step 6: Test Backend (5 min)
+
+Test via REST API:
+```bash
+# Test booking without infant
 curl -X POST http://localhost:8080/bookings \
   -H "Content-Type: application/json" \
-  -d '{"user_id":1,"name":"Alice","flight_id":1,"seat_class":"economy"}'
+  -d '{
+    "user_id": 1,
+    "name": "Alice Johnson",
+    "flight_id": 1,
+    "seat_class": "economy",
+    "has_infant": false
+  }'
+
+# Test booking with infant
+curl -X POST http://localhost:8080/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "name": "Alice Johnson",
+    "flight_id": 2,
+    "seat_class": "economy",
+    "has_infant": true
+  }'
 ```
 
----
+**Expected**: Both requests return booking objects with `has_infant` field.
 
-### Phase 2: Frontend Implementation (Day 3-4)
+### Phase 2: Frontend Implementation (45 minutes)
 
-#### Step 2.1: Update Type Definitions
-**Priority**: CRITICAL - Foundation for TypeScript
+#### Step 7: Update TypeScript Types (5 min)
+**File**: [`booking_system_frontend/src/types/index.ts`](../booking_system_frontend/src/types/index.ts)
 
-1. Update `Flight` interface with new fields
-2. Update `Booking` interface with `seat_class`
-3. Update `BookingRequest` interface
-4. Add `SeatClass` type and helper types
-
-**Files to modify**:
-- [`booking_system_frontend/src/types/index.ts`](../booking_system_frontend/src/types/index.ts)
-
-**Verification**:
-```bash
-cd booking_system_frontend
-npm run build  # Should compile without errors
+1. Update `Booking` interface (line 21):
+```typescript
+export interface Booking {
+  booking_id: number;
+  user_id: number;
+  flight_id: number;
+  seat_class: SeatClass;
+  status: 'booked' | 'cancelled' | 'completed';
+  booking_time: string;
+  has_infant: boolean;  // Add this line
+}
 ```
 
-#### Step 2.2: Update FlightCard Component
-**Priority**: HIGH - Primary user interaction
+2. Update `BookingRequest` interface (line 37):
+```typescript
+export interface BookingRequest {
+  user_id: number;
+  name: string;
+  flight_id: number;
+  seat_class: SeatClass;
+  has_infant: boolean;  // Add this line
+}
+```
 
-1. Add seat class selection UI
-2. Display pricing for all three classes
-3. Show availability per class
-4. Add visual differentiation (icons, colors)
-5. Update booking callback to include seat class
+**Verification**: Run `npm run build` to check for TypeScript errors.
 
-**Files to modify**:
-- [`booking_system_frontend/src/components/flights/FlightCard.tsx`](../booking_system_frontend/src/components/flights/FlightCard.tsx)
+#### Step 8: Update BookingModal Component (25 min)
+**File**: [`booking_system_frontend/src/components/bookings/BookingModal.tsx`](../booking_system_frontend/src/components/bookings/BookingModal.tsx)
 
-**Design Specifications**:
-- Economy: Blue theme (💺)
-- Business: Purple theme (🛋️)
-- Galaxium: Gold theme (👑)
+1. Add `Baby` icon import (line 4):
+```typescript
+import { Plane, Calendar, Clock, DollarSign, Baby } from 'lucide-react';
+```
 
-#### Step 2.3: Update BookingModal Component
-**Priority**: HIGH - Confirmation flow
+2. Add state for infant selection (after line 20):
+```typescript
+const [hasInfant, setHasInfant] = useState(false);
+```
 
-1. Accept `seatClass` prop
-2. Display selected class prominently
-3. Show class-specific pricing
-4. Update confirmation callback
+3. Update `handleConfirmBooking` to include `has_infant` (line 50):
+```typescript
+const result = await bookFlight({
+  user_id: user.user_id,
+  name: user.name,
+  flight_id: flight.flight_id,
+  seat_class: seatClass,
+  has_infant: hasInfant,  // Add this line
+});
+```
 
-**Files to modify**:
-- [`booking_system_frontend/src/components/bookings/BookingModal.tsx`](../booking_system_frontend/src/components/bookings/BookingModal.tsx)
+4. Update success message (line 62):
+```typescript
+toast.success(
+  hasInfant 
+    ? 'Flight booked successfully with infant!' 
+    : 'Flight booked successfully!'
+);
+```
 
-#### Step 2.4: Update BookingCard Component
-**Priority**: MEDIUM - Display existing bookings
+5. Add infant selection UI (after seat class section, before passenger info):
+```typescript
+{/* Infant Selection */}
+<div className="glass-card p-4 bg-white/5">
+  <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center gap-2">
+      <Baby className="text-cosmic-purple" size={20} />
+      <h4 className="text-sm font-semibold text-star-white">
+        Traveling with Infant?
+      </h4>
+    </div>
+  </div>
+  
+  <p className="text-xs text-star-white/60 mb-3">
+    Lap infant under 2 years (free, no seat required)
+  </p>
+  
+  <button
+    onClick={() => setHasInfant(!hasInfant)}
+    className={`w-full p-3 rounded-lg border transition-all ${
+      hasInfant
+        ? 'border-cosmic-purple bg-cosmic-purple/20 text-star-white'
+        : 'border-white/10 bg-white/5 text-star-white/60 hover:border-white/20'
+    }`}
+  >
+    <div className="flex items-center justify-between">
+      <span className="text-sm font-medium">
+        {hasInfant ? '✓ Infant included' : 'Add infant to booking'}
+      </span>
+      <span className="text-xs text-alien-green font-semibold">
+        FREE
+      </span>
+    </div>
+  </button>
+</div>
+```
 
-1. Add seat class badge display
-2. Show class-specific styling
-3. Display class icon
+6. Update total price section to show infant info (line 165):
+```typescript
+<div className="flex items-center justify-between p-4 glass-card bg-cosmic-gradient">
+  <div className="flex items-center gap-2">
+    <DollarSign className="text-white" size={24} />
+    <div>
+      <span className="text-white font-semibold">Total Price</span>
+      {hasInfant && (
+        <p className="text-xs text-white/80">+ 1 infant (free)</p>
+      )}
+    </div>
+  </div>
+  <span className="text-2xl font-bold text-white">
+    {formatCurrency(price)}
+  </span>
+</div>
+```
 
-**Files to modify**:
-- [`booking_system_frontend/src/components/bookings/BookingCard.tsx`](../booking_system_frontend/src/components/bookings/BookingCard.tsx)
+**Verification**: Component should compile without errors.
 
-#### Step 2.5: Update Pages
-**Priority**: HIGH - Integration
+#### Step 9: Update BookingCard Component (15 min)
+**File**: [`booking_system_frontend/src/components/bookings/BookingCard.tsx`](../booking_system_frontend/src/components/bookings/BookingCard.tsx)
 
-1. **Flights Page**:
-   - Update state management for seat class
-   - Pass seat class to booking modal
-   - Update API call with seat class
+1. Add `Baby` icon import:
+```typescript
+import { Baby } from 'lucide-react';
+```
 
-2. **MyBookings Page**:
-   - Display seat class in booking cards
-   - Optional: Add class filter
+2. Add infant badge in badges row (after seat class badge):
+```typescript
+{/* Infant badge */}
+{booking.has_infant && (
+  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cosmic-purple/20 border border-cosmic-purple/30">
+    <Baby size={14} className="text-cosmic-purple" />
+    <span className="text-xs text-cosmic-purple font-medium">
+      + Infant
+    </span>
+  </div>
+)}
+```
 
-**Files to modify**:
-- [`booking_system_frontend/src/pages/Flights.tsx`](../booking_system_frontend/src/pages/Flights.tsx)
-- [`booking_system_frontend/src/pages/MyBookings.tsx`](../booking_system_frontend/src/pages/MyBookings.tsx)
+**Verification**: Component should compile without errors.
 
-**Testing Phase 2**:
+#### Step 10: Test Frontend (5 min)
+
+1. Start frontend development server:
 ```bash
-# Start frontend dev server
 cd booking_system_frontend
 npm run dev
-
-# Manual testing checklist:
-# - View flights with all three classes
-# - Select each class and verify pricing
-# - Book a flight in each class
-# - Verify booking appears in My Bookings with correct class
-# - Cancel booking and verify seat restoration
 ```
 
----
+2. Open browser to `http://localhost:5173`
 
-### Phase 3: Testing & Refinement (Day 5)
+3. Test booking flow:
+   - Navigate to Flights page
+   - Select a flight and seat class
+   - Toggle infant selection on/off
+   - Confirm booking
+   - Navigate to My Bookings
+   - Verify infant badge appears on booking card
 
-#### Step 3.1: Backend Testing
-**Priority**: HIGH
+**Expected**: Infant toggle works, booking succeeds, badge displays correctly.
 
-1. Update existing tests for new schema
-2. Add tests for seat class validation
-3. Add tests for seat availability per class
-4. Add tests for cancellation restoration
+### Phase 3: Testing & Verification (30 minutes)
 
-**Files to modify**:
-- [`booking_system_backend/tests/test_services.py`](../booking_system_backend/tests/test_services.py)
-- [`booking_system_backend/tests/test_rest.py`](../booking_system_backend/tests/test_rest.py)
+#### Step 11: Backend Unit Tests (15 min)
+**File**: [`booking_system_backend/tests/test_services.py`](../booking_system_backend/tests/test_services.py)
 
-**Test Cases**:
+Add test cases:
 ```python
-# Key test scenarios
-- Book economy seat successfully
-- Book business seat successfully
-- Book galaxium seat successfully
-- Reject invalid seat class
-- Reject booking when class is sold out
-- Verify correct seat count decrements
-- Verify cancellation restores correct class
-- Verify price calculation for each class
+def test_book_flight_with_infant(db_session, sample_user, sample_flight):
+    """Test booking with infant doesn't consume extra seat."""
+    initial_seats = sample_flight.economy_seats_available
+    
+    result = booking.book_flight(
+        db_session,
+        sample_user.user_id,
+        sample_user.name,
+        sample_flight.flight_id,
+        "economy",
+        has_infant=True
+    )
+    
+    assert isinstance(result, BookingOut)
+    assert result.has_infant is True
+    
+    db_session.refresh(sample_flight)
+    assert sample_flight.economy_seats_available == initial_seats - 1
+
+def test_book_flight_without_infant(db_session, sample_user, sample_flight):
+    """Test booking without infant works as before."""
+    result = booking.book_flight(
+        db_session,
+        sample_user.user_id,
+        sample_user.name,
+        sample_flight.flight_id,
+        "economy",
+        has_infant=False
+    )
+    
+    assert isinstance(result, BookingOut)
+    assert result.has_infant is False
 ```
 
-#### Step 3.2: Frontend Testing
-**Priority**: MEDIUM
-
-1. Visual regression testing
-2. Responsive design testing (mobile, tablet, desktop)
-3. Accessibility testing
-4. Error handling testing
-
-**Manual Test Checklist**:
-- [ ] All seat classes display with correct icons
-- [ ] Prices calculate correctly (1x, 2x, 5x)
-- [ ] Cannot select sold-out classes
-- [ ] Selection state is clear and visible
-- [ ] Booking modal shows correct class and price
-- [ ] My Bookings displays class badges
-- [ ] Mobile layout is usable
-- [ ] Keyboard navigation works
-- [ ] Screen reader announces changes
-
-#### Step 3.3: Integration Testing
-**Priority**: HIGH
-
-1. End-to-end booking flow for each class
-2. Concurrent booking scenarios
-3. Edge cases (last seat, sold out, etc.)
-
-**Test Scenarios**:
-```
-Scenario 1: Book last economy seat
-- Verify economy becomes unavailable
-- Verify other classes still available
-
-Scenario 2: Book all seats of one class
-- Verify class shows as sold out
-- Verify total availability updates
-
-Scenario 3: Cancel and rebook
-- Cancel economy booking
-- Verify economy seat restored
-- Book business seat
-- Verify business seat decremented
-```
-
----
-
-## Data Migration Strategy
-
-### For Development/Demo Environment
-
-**Approach**: Drop and recreate database
-
+Run tests:
 ```bash
 cd booking_system_backend
-python seed.py
+pytest tests/test_services.py -v
 ```
 
-**Pros**:
-- Simple and fast
-- Clean slate
-- No migration complexity
+**Expected**: All tests pass.
 
-**Cons**:
-- Loses all existing data
-- Not suitable for production
+#### Step 12: Integration Testing (15 min)
 
-### For Production Environment (Future)
+Test complete user flow:
 
-**Approach**: SQL migration script
+1. **Book flight without infant**:
+   - Select flight
+   - Choose seat class
+   - Leave infant toggle off
+   - Confirm booking
+   - Verify booking appears without infant badge
 
-```sql
--- Step 1: Add new columns to flights table
-ALTER TABLE flights ADD COLUMN base_price INTEGER;
-ALTER TABLE flights ADD COLUMN total_seats INTEGER;
-ALTER TABLE flights ADD COLUMN economy_seats_available INTEGER;
-ALTER TABLE flights ADD COLUMN business_seats_available INTEGER;
-ALTER TABLE flights ADD COLUMN galaxium_seats_available INTEGER;
+2. **Book flight with infant**:
+   - Select different flight
+   - Choose seat class
+   - Toggle infant on
+   - Verify "FREE" indicator shows
+   - Confirm booking
+   - Verify success message mentions infant
+   - Verify booking appears with infant badge
 
--- Step 2: Migrate existing data
-UPDATE flights SET 
-  base_price = price,
-  total_seats = seats_available,
-  economy_seats_available = CAST(seats_available * 0.6 AS INTEGER),
-  business_seats_available = CAST(seats_available * 0.3 AS INTEGER),
-  galaxium_seats_available = seats_available - 
-    CAST(seats_available * 0.6 AS INTEGER) - 
-    CAST(seats_available * 0.3 AS INTEGER);
+3. **Cancel booking with infant**:
+   - Cancel the infant booking
+   - Verify cancellation works normally
+   - Verify seat is restored
 
--- Step 3: Add seat_class to bookings (default to economy)
-ALTER TABLE bookings ADD COLUMN seat_class TEXT DEFAULT 'economy';
+4. **Edge cases**:
+   - Try booking with infant when no seats available (should fail)
+   - Verify infant doesn't affect seat availability count
 
--- Step 4: Drop old columns (optional, after verification)
--- ALTER TABLE flights DROP COLUMN price;
--- ALTER TABLE flights DROP COLUMN seats_available;
-```
+**Expected**: All flows work correctly, infant flag persists through booking lifecycle.
 
-**Pros**:
-- Preserves existing data
-- Gradual migration possible
-- Rollback capability
+## Rollback Plan
 
-**Cons**:
-- More complex
-- Requires careful testing
-- May need downtime
-
----
-
-## Pricing Strategy Documentation
-
-### Base Pricing Model
-
-**Economy Class** (Base Price):
-- Standard interplanetary travel
-- Basic amenities
-- Most affordable option
-- Price = `base_price`
-
-**Business Class** (2x Premium):
-- Enhanced comfort
-- Priority boarding
-- Extra legroom
-- Price = `base_price × 2`
-
-**Galaxium Class** (5x Luxury):
-- Ultimate luxury experience
-- Private cabin
-- Gourmet meals
-- Concierge service
-- Price = `base_price × 5`
-
-### Example Pricing
-
-| Route | Economy | Business | Galaxium |
-|-------|---------|----------|----------|
-| Earth → Mars | $1,000,000 | $2,000,000 | $5,000,000 |
-| Earth → Moon | $500,000 | $1,000,000 | $2,500,000 |
-| Earth → Pluto | $5,000,000 | $10,000,000 | $25,000,000 |
-
-### Dynamic Pricing Considerations (Future Enhancement)
-
-Potential future features:
-- Demand-based pricing
-- Early bird discounts
-- Last-minute deals
-- Seasonal variations
-- Loyalty program multipliers
-
----
-
-## Rollout Plan
-
-### Pre-Launch Checklist
-
-**Backend**:
-- [ ] Database schema updated
-- [ ] All services updated
-- [ ] API endpoints tested
-- [ ] MCP tools updated
-- [ ] Seed data generates correctly
-- [ ] All tests passing
-
-**Frontend**:
-- [ ] Type definitions updated
-- [ ] All components updated
-- [ ] Pages integrated
-- [ ] Styling complete
-- [ ] Responsive design verified
-- [ ] Accessibility checked
-
-**Integration**:
-- [ ] End-to-end flow tested
-- [ ] Error handling verified
-- [ ] Edge cases covered
-- [ ] Performance acceptable
-
-### Launch Steps
-
-1. **Backup current database** (if production)
-2. **Deploy backend changes**:
-   ```bash
-   cd booking_system_backend
-   python seed.py  # Recreate database
-   python server.py  # Start server
-   ```
-3. **Deploy frontend changes**:
-   ```bash
-   cd booking_system_frontend
-   npm run build
-   # Deploy build artifacts
-   ```
-4. **Verify deployment**:
-   - Test booking flow for each class
-   - Verify data persistence
-   - Check error handling
-5. **Monitor for issues**:
-   - Watch server logs
-   - Monitor error rates
-   - Check user feedback
-
-### Rollback Plan
-
-If critical issues arise:
+If issues occur:
 
 1. **Backend rollback**:
    - Restore database backup
-   - Deploy previous backend version
-   
+   - Revert code changes in git
+   - Restart server
+
 2. **Frontend rollback**:
-   - Deploy previous frontend build
-   - Clear browser caches
+   - Revert code changes in git
+   - Clear browser cache
+   - Restart dev server
 
-3. **Partial rollback** (if only frontend issues):
-   - Keep backend changes
-   - Rollback frontend only
-   - Backend remains backward compatible
+## Post-Implementation
 
----
-
-## Performance Considerations
-
-### Database Queries
-
-**Before** (single seat count):
-```sql
-SELECT * FROM flights WHERE seats_available > 0;
-```
-
-**After** (three seat counts):
-```sql
-SELECT * FROM flights 
-WHERE economy_seats_available > 0 
-   OR business_seats_available > 0 
-   OR galaxium_seats_available > 0;
-```
-
-**Impact**: Minimal - SQLite handles this efficiently
-
-### API Response Size
-
-**Before**:
-```json
-{
-  "flight_id": 1,
-  "price": 1000000,
-  "seats_available": 10
-}
-```
-
-**After**:
-```json
-{
-  "flight_id": 1,
-  "base_price": 1000000,
-  "economy_price": 1000000,
-  "business_price": 2000000,
-  "galaxium_price": 5000000,
-  "economy_seats_available": 6,
-  "business_seats_available": 3,
-  "galaxium_seats_available": 1
-}
-```
-
-**Impact**: ~2x response size - acceptable for this scale
-
-### Frontend Rendering
-
-- Three seat class buttons per flight card
-- Minimal performance impact
-- Consider virtualization if >100 flights displayed
-
----
-
-## Future Enhancements
-
-### Phase 4 (Optional)
-
-1. **Seat Selection**:
-   - Visual seat map
-   - Specific seat assignment
-   - Seat preferences
-
-2. **Class Upgrades**:
-   - Upgrade after booking
-   - Upgrade pricing logic
-   - Availability checking
-
-3. **Dynamic Allocation**:
-   - Adjust class ratios based on demand
-   - Flexible seat conversion
-   - Revenue optimization
-
-4. **Analytics**:
-   - Class popularity metrics
-   - Revenue by class
-   - Booking patterns
-
-5. **Amenities**:
-   - Class-specific features list
-   - Comparison tool
-   - Visual differentiation
-
----
-
-## Support & Maintenance
-
-### Common Issues
-
-**Issue**: Seat count mismatch after cancellation
-**Solution**: Verify `cancel_booking()` restores correct class
-
-**Issue**: Cannot book despite showing availability
-**Solution**: Check seat class validation logic
-
-**Issue**: Prices not calculating correctly
-**Solution**: Verify multiplier logic in `list_flights()`
+### Documentation Updates
+- [ ] Update API documentation with `has_infant` parameter
+- [ ] Update user guide with infant booking instructions
+- [ ] Document pricing policy for infants
 
 ### Monitoring
+- [ ] Monitor booking success rates
+- [ ] Track infant booking usage
+- [ ] Watch for any error patterns
 
-Key metrics to track:
-- Bookings by class (distribution)
-- Revenue by class
-- Availability trends
-- Cancellation rates by class
-- User preferences
+### Future Enhancements
+- Add infant age validation (under 2 years)
+- Support multiple infants per booking
+- Add infant meal preferences
+- Generate infant-specific boarding passes
 
-### Documentation
+## Common Issues & Solutions
 
-Maintain documentation for:
-- API endpoints with seat class parameter
-- Database schema with seat class fields
-- Frontend component props
-- Business logic for seat allocation
-- Pricing calculation formulas
+### Issue: Database schema mismatch
+**Solution**: Delete database file and restart server to recreate with new schema.
 
----
+### Issue: TypeScript compilation errors
+**Solution**: Ensure all interfaces are updated consistently. Run `npm run build` to identify issues.
 
-## Conclusion
+### Issue: Infant badge not showing
+**Solution**: Check that backend returns `has_infant` field. Verify frontend types match backend schema.
 
-This implementation adds significant value to Galaxium Travels by:
-- Providing customer choice
-- Enabling premium pricing
-- Increasing revenue potential
-- Enhancing user experience
+### Issue: Booking fails with infant
+**Solution**: Check backend logs for errors. Verify `has_infant` parameter is being passed correctly.
 
-**Estimated Implementation Time**: 5 days
-**Complexity**: Medium
-**Risk Level**: Low (well-defined requirements)
+## Success Criteria
 
-**Success Criteria**:
-- ✅ All three classes bookable
-- ✅ Correct pricing for each class
-- ✅ Accurate seat availability tracking
-- ✅ Smooth user experience
-- ✅ No data loss or corruption
+- ✅ Backend accepts `has_infant` parameter
+- ✅ Database stores infant flag correctly
+- ✅ Frontend displays infant selection UI
+- ✅ Infant bookings are free (no price change)
+- ✅ Infants don't consume seats
+- ✅ Infant badge displays on booking cards
+- ✅ All tests pass
+- ✅ No breaking changes to existing functionality
 
-// Made with Bob
+## Estimated Time
+- **Backend**: 60 minutes
+- **Frontend**: 45 minutes
+- **Testing**: 30 minutes
+- **Total**: ~2.5 hours
+
+## Support
+For issues during implementation, refer to:
+- Backend plan: [`plans/01-backend-implementation.md`](./01-backend-implementation.md)
+- Frontend plan: [`plans/02-frontend-implementation.md`](./02-frontend-implementation.md)
+- Project architecture: [`AGENTS.md`](../AGENTS.md)

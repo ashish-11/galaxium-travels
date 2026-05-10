@@ -28,7 +28,7 @@ def list_flights() -> list[FlightOut]:
 
 
 @mcp.tool()
-def book_flight(user_id: int, name: str, flight_id: int, seat_class: str) -> BookingOut:
+def book_flight(user_id: int, name: str, flight_id: int, seat_class: str, has_infant: bool = False) -> BookingOut:
     """Book a seat on a specific flight for a user in a specific seat class.
     
     Args:
@@ -36,12 +36,14 @@ def book_flight(user_id: int, name: str, flight_id: int, seat_class: str) -> Boo
         name: The user's name (must match registered name)
         flight_id: The flight ID to book
         seat_class: Seat class - 'economy', 'business', or 'galaxium'
+        has_infant: Whether booking includes a lap infant (free, no seat)
     
     Decrements available seats for the specified class if successful.
+    Infant does not consume a seat.
     Returns booking details or raises an error if booking is not possible."""
     db = SessionLocal()
     try:
-        result = booking.book_flight(db, user_id, name, flight_id, seat_class)
+        result = booking.book_flight(db, user_id, name, flight_id, seat_class, has_infant)
         if isinstance(result, ErrorResponse):
             raise Exception(result.details or result.error)
         return result
@@ -152,9 +154,10 @@ def get_flights(db: Session = Depends(get_db)):
 def book_flight_endpoint(request: BookingRequest, db: Session = Depends(get_db)):
     """Book a seat on a specific flight for a user in a specific seat class.
 
-    Requires user_id, name, flight_id, and seat_class. Decrements available seats for the specified class if successful.
+    Requires user_id, name, flight_id, and seat_class. Optionally include has_infant for lap infant (free, no seat).
+    Decrements available seats for the specified class if successful.
     """
-    return booking.book_flight(db, request.user_id, request.name, request.flight_id, request.seat_class)
+    return booking.book_flight(db, request.user_id, request.name, request.flight_id, request.seat_class, request.has_infant)
 
 
 @app.get("/bookings/{user_id}", response_model=list[BookingOut], tags=["Bookings"])

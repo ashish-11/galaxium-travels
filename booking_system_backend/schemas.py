@@ -26,6 +26,7 @@ class BookingRequest(BaseModel):
     name: str
     flight_id: int
     seat_class: str  # 'economy', 'business', or 'galaxium'
+    has_infant: bool = False
 
 
 class BookingOut(BaseModel):
@@ -35,6 +36,7 @@ class BookingOut(BaseModel):
     seat_class: str
     status: str
     booking_time: str
+    has_infant: bool
 
     class Config:
         from_attributes = True

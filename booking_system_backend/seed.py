@@ -82,7 +82,8 @@ def seed():
             flight_id=flight_id,
             seat_class=seat_class,
             status=status,
-            booking_time=booking_time
+            booking_time=booking_time,
+            has_infant=False
         ))
     db.add_all(bookings)
     db.commit()
