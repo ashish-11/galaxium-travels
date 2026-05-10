@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Content } from '@carbon/react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { Starfield } from '../common/Starfield';
@@ -44,11 +45,11 @@ export const Layout = ({ children }: LayoutProps) => {
       <Header />
       
       {/* Main content */}
-      <main className="relative z-10 flex-1 pt-24 pb-8">
+      <Content className="relative z-10 flex-1 pt-24 pb-8">
         <div className="container mx-auto px-4">
           {children}
         </div>
-      </main>
+      </Content>
       
       {/* Footer */}
       <Footer />

@@ -1,31 +1,31 @@
-import type { InputHTMLAttributes } from 'react';
-import clsx from 'clsx';
+/**
+ * Input component using Carbon Design System TextInput
+ * Maintains compatibility with existing Input API
+ */
+import { TextInput } from '@carbon/react';
+import type { ComponentProps } from 'react';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+type TextInputProps = ComponentProps<typeof TextInput>;
+
+interface InputProps extends Omit<TextInputProps, 'id' | 'labelText' | 'invalid' | 'invalidText'> {
+  id?: string;
   label?: string;
   error?: string;
 }
 
-export const Input = ({ label, error, className, ...props }: InputProps) => {
+export const Input = ({ label, error, className, id, ...props }: InputProps) => {
+  // Generate ID if not provided
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  
   return (
-    <div className="w-full">
-      {label && (
-        <label className="block text-sm font-medium text-star-white mb-2">
-          {label}
-        </label>
-      )}
-      <input
-        className={clsx(
-          'input-field',
-          error && 'border-red-500 focus:ring-red-500',
-          className
-        )}
-        {...props}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-400">{error}</p>
-      )}
-    </div>
+    <TextInput
+      id={inputId}
+      labelText={label || ''}
+      invalid={!!error}
+      invalidText={error}
+      className={className}
+      {...props}
+    />
   );
 };
 

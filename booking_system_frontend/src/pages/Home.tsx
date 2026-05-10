@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/common';
-import { Rocket, Globe, Shield, Zap } from 'lucide-react';
+import { Rocket, Earth, Security, Flash } from '@carbon/icons-react';
 import { motion } from 'framer-motion';
 
 export const Home = () => {
@@ -11,17 +11,17 @@ export const Home = () => {
       description: 'Explore destinations across the solar system with our state-of-the-art spacecraft.',
     },
     {
-      icon: <Globe size={32} />,
+      icon: <Earth size={32} />,
       title: 'Multiple Destinations',
       description: 'From Mars to Europa, discover new worlds and book your journey today.',
     },
     {
-      icon: <Shield size={32} />,
+      icon: <Security size={32} />,
       title: 'Safe & Secure',
       description: 'Your safety is our priority with advanced navigation and life support systems.',
     },
     {
-      icon: <Zap size={32} />,
+      icon: <Flash size={32} />,
       title: 'Instant Booking',
       description: 'Book your flight in seconds and receive instant confirmation.',
     },

@@ -1,4 +1,8 @@
-import { motion } from 'framer-motion';
+/**
+ * LoadingSpinner component using Carbon Design System Loading
+ * Maintains compatibility with existing LoadingSpinner API
+ */
+import { Loading } from '@carbon/react';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -6,22 +10,13 @@ interface LoadingSpinnerProps {
 }
 
 export const LoadingSpinner = ({ size = 'md', text }: LoadingSpinnerProps) => {
-  const sizeClasses = {
-    sm: 'h-6 w-6',
-    md: 'h-12 w-12',
-    lg: 'h-16 w-16',
-  };
-
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-8">
-      <motion.div
-        className={`${sizeClasses[size]} border-4 border-cosmic-purple border-t-transparent rounded-full`}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+      <Loading
+        description={text || 'Loading...'}
+        withOverlay={false}
+        small={size === 'sm'}
       />
-      {text && (
-        <p className="text-star-white/70 text-sm">{text}</p>
-      )}
     </div>
   );
 };

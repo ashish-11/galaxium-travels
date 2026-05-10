@@ -1,0 +1,274 @@
+// Carbon Component Overrides for Galaxium Travels
+// Custom styling to maintain space theme aesthetic
+
+// Button customizations - Cosmic gradient
+.cds--btn--primary {
+  background: var(--cosmic-gradient);
+  border: none;
+  
+  &:hover {
+    background: linear-gradient(135deg, #7C3AED, #F472B6);
+    box-shadow: 0 10px 25px rgba(99, 102, 241, 0.5);
+  }
+  
+  &:active {
+    background: linear-gradient(135deg, #5B21B6, #DB2777);
+  }
+}
+
+// Tile/Card customizations - Glass morphism
+.cds--tile {
+  background: var(--glass-effect);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: var(--glass-hover);
+    transform: translateY(-2px);
+  }
+}
+
+.cds--tile--clickable {
+  &:hover {
+    background: var(--glass-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  }
+}
+
+// Modal customizations - Glass effect
+.cds--modal {
+  .cds--modal-container {
+    background: rgba(10, 25, 41, 0.95) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+  
+  .cds--modal-header {
+    background: transparent;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--star-white);
+    
+    .cds--modal-header__heading {
+      color: var(--star-white);
+    }
+  }
+  
+  .cds--modal-content {
+    background: transparent;
+    color: var(--star-white) !important;
+  }
+  
+  // Override Carbon's default modal body text color
+  .cds--modal-content__text {
+    color: var(--star-white) !important;
+  }
+  
+  // NUCLEAR OPTION: Force ALL elements in modal body to be white
+  .cds--modal-body {
+    color: var(--star-white) !important;
+    
+    // Override EVERYTHING with wildcard selector
+    * {
+      color: var(--star-white) !important;
+    }
+    
+    // Double down on specific elements
+    p, span, div, label, h1, h2, h3, h4, h5, h6, small, button, a, li, td, th {
+      color: var(--star-white) !important;
+    }
+  }
+}
+
+// Input field customizations - Glass effect
+.cds--text-input,
+.cds--select-input,
+.cds--text-area {
+  background: var(--glass-effect);
+  border-color: var(--glass-border);
+  color: var(--star-white);
+  
+  &:focus {
+    outline: 2px solid var(--cosmic-purple);
+    outline-offset: 2px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  &::placeholder {
+    color: rgba(249, 250, 251, 0.4);
+  }
+}
+
+// Label styling
+.cds--label {
+  color: var(--star-white);
+}
+
+// Header/UI Shell customizations - Glass effect
+.cds--header {
+  background: var(--glass-effect);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.cds--header__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: var(--cosmic-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cds--header__menu-item {
+  &[aria-current="page"] {
+    background: rgba(99, 102, 241, 0.1);
+    border-bottom: 3px solid var(--cosmic-purple);
+  }
+}
+
+.cds--header__action {
+  &:hover {
+    background: rgba(99, 102, 241, 0.1);
+  }
+}
+
+// Side navigation - Glass effect
+.cds--side-nav {
+  background: var(--glass-effect);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid var(--glass-border);
+}
+
+.cds--side-nav__link {
+  color: var(--star-white);
+  
+  &:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--cosmic-purple);
+  }
+  
+  &[aria-current="page"] {
+    background: rgba(99, 102, 241, 0.2);
+    border-left: 3px solid var(--cosmic-purple);
+  }
+}
+
+// Tag customizations
+.cds--tag {
+  &.cds--tag--green {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--alien-green);
+    border: 1px solid var(--alien-green);
+  }
+  
+  &.cds--tag--red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #EF4444;
+    border: 1px solid #EF4444;
+  }
+  
+  &.cds--tag--yellow {
+    background: rgba(245, 158, 11, 0.2);
+    color: var(--solar-orange);
+    border: 1px solid var(--solar-orange);
+  }
+}
+
+// Radio button customizations
+.cds--radio-button__label {
+  color: var(--star-white);
+}
+
+.cds--radio-button__appearance {
+  border-color: var(--glass-border);
+  
+  &:checked {
+    border-color: var(--cosmic-purple);
+    background-color: var(--cosmic-purple);
+  }
+}
+
+// Loading spinner customizations
+.cds--loading {
+  stroke: var(--cosmic-purple);
+}
+
+// Toast notification overrides (for react-hot-toast compatibility)
+.cds--toast-notification {
+  background: var(--glass-effect);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+// Header customizations
+.carbon-header-custom {
+  background: var(--glass-effect);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+}
+
+.header-name-custom {
+  font-size: 1.25rem;
+  font-weight: 700;
+  
+  &:hover {
+    background: transparent;
+  }
+}
+
+.cds--header__name {
+  &:hover {
+    background: transparent;
+  }
+}
+
+.cds--header__menu-item {
+  &[aria-current="page"],
+  &.cds--header__menu-item--current {
+    background: rgba(99, 102, 241, 0.1);
+    border-bottom: 3px solid var(--cosmic-purple);
+    
+    &::after {
+      display: none;
+    }
+  }
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.cds--header__global {
+  background: transparent;
+}
+
+.cds--header__action {
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  &:active {
+    background: rgba(99, 102, 241, 0.2);
+  }
+}
+
+.user-action-custom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+// Content wrapper
+.cds--content {
+  background: transparent;
+  padding: 0;
+}
+
+// Made with Bob

@@ -1,4 +1,4 @@
-import { Github, Heart } from 'lucide-react';
+import { LogoGithub, Favorite } from '@carbon/icons-react';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -15,7 +15,7 @@ export const Footer = () => {
           {/* Made with love */}
           <div className="flex items-center gap-2 text-star-white/70 text-sm">
             <span>Made with</span>
-            <Heart size={16} className="text-nebula-pink fill-nebula-pink" />
+            <Favorite size={16} className="text-nebula-pink fill-nebula-pink" />
             <span>for space travelers</span>
           </div>
 
@@ -27,7 +27,7 @@ export const Footer = () => {
               rel="noopener noreferrer"
               className="text-star-white/70 hover:text-cosmic-purple transition-colors"
             >
-              <Github size={20} />
+              <LogoGithub size={20} />
             </a>
           </div>
         </div>

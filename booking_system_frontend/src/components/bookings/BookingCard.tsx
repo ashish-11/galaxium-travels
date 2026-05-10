@@ -1,6 +1,7 @@
 import type { Booking, Flight, SeatClass } from '../../types';
-import { Card, Button } from '../common';
-import { Plane, Calendar, CheckCircle, XCircle, Clock, Baby } from 'lucide-react';
+import { Tile, Tag } from '@carbon/react';
+import { Plane, Calendar as CalendarIcon, CheckmarkFilled, CloseFilled, Time, PedestrianChild } from '@carbon/icons-react';
+import { Button } from '../common';
 import { formatDate, formatCurrency } from '../../utils/formatters';
 import { motion } from 'framer-motion';
 
@@ -16,13 +17,13 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
   const getStatusIcon = () => {
     switch (booking.status) {
       case 'booked':
-        return <CheckCircle className="text-alien-green" size={20} />;
+        return <CheckmarkFilled className="text-alien-green" size={20} />;
       case 'cancelled':
-        return <XCircle className="text-red-500" size={20} />;
+        return <CloseFilled className="text-red-500" size={20} />;
       case 'completed':
-        return <CheckCircle className="text-blue-500" size={20} />;
+        return <CheckmarkFilled className="text-blue-500" size={20} />;
       default:
-        return <Clock className="text-star-white/50" size={20} />;
+        return <Time className="text-star-white/50" size={20} />;
     }
   };
 
@@ -41,17 +42,17 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
 
   const getSeatClassBadge = (seatClass: SeatClass) => {
     const badges = {
-      economy: { icon: '💺', label: 'Economy', color: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
-      business: { icon: '🛋️', label: 'Business', color: 'bg-purple-500/20 text-purple-400 border-purple-500/40' },
-      galaxium: { icon: '👑', label: 'Galaxium', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+      economy: { icon: '💺', label: 'Economy', type: 'blue' as const },
+      business: { icon: '🛋️', label: 'Business', type: 'purple' as const },
+      galaxium: { icon: '👑', label: 'Galaxium', type: 'cyan' as const },
     };
 
     const badge = badges[seatClass];
     return (
-      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold border ${badge.color}`}>
+      <Tag type={badge.type} className="inline-flex items-center gap-1">
         <span>{badge.icon}</span>
         {badge.label}
-      </span>
+      </Tag>
     );
   };
 
@@ -79,7 +80,7 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
     >
-      <Card>
+      <Tile>
         {/* Header */}
         <div className="flex items-start justify-between mb-4 pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -111,12 +112,12 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
               <div className="flex flex-wrap gap-2 justify-end">
                 {getSeatClassBadge(booking.seat_class)}
                 {booking.has_infant && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cosmic-purple/20 border border-cosmic-purple/30">
-                    <Baby size={14} className="text-cosmic-purple" />
-                    <span className="text-xs text-cosmic-purple font-medium">
+                  <Tag type="purple" className="flex items-center gap-1">
+                    <PedestrianChild size={14} />
+                    <span className="text-xs font-medium">
                       + Infant
                     </span>
-                  </div>
+                  </Tag>
                 )}
               </div>
             </div>
@@ -151,7 +152,7 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
 
         {/* Booking Time */}
         <div className="flex items-center gap-2 text-sm text-star-white/60 mb-4">
-          <Calendar size={16} />
+          <CalendarIcon size={16} />
           <span>Booked on {formatDate(booking.booking_time)}</span>
         </div>
 
@@ -177,7 +178,7 @@ export const BookingCard = ({ booking, flight, onCancel, onModify, isCancelling 
             Cancel Booking
           </Button>
         )}
-      </Card>
+      </Tile>
     </motion.div>
   );
 };

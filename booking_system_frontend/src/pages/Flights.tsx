@@ -6,7 +6,7 @@ import { UserIdentification } from '../components/user/UserIdentification';
 import { BookingModal } from '../components/bookings/BookingModal';
 import { getFlights } from '../services/api';
 import { useUser } from '../hooks/useUser';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter } from '@carbon/icons-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 

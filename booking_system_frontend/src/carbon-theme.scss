@@ -1,0 +1,135 @@
+// Carbon Design System Theme Configuration for Galaxium Travels
+// Space-themed dark design with cosmic colors and glass morphism effects
+
+@use '@carbon/react/scss/theme' with (
+  $theme: (
+    // Background colors - Deep space theme
+    background: #030712,
+    background-hover: #0A1929,
+    background-active: #1E293B,
+    background-selected: rgba(99, 102, 241, 0.1),
+    
+    // Interactive colors - Cosmic purple
+    interactive: #6366F1,
+    
+    // Focus colors
+    focus: #6366F1,
+    
+    // Border colors - Subtle glass effect
+    border-subtle: rgba(255, 255, 255, 0.1),
+    border-strong: rgba(255, 255, 255, 0.2),
+    
+    // Text colors - Star white
+    text-primary: #F9FAFB,
+    text-secondary: rgba(249, 250, 251, 0.7),
+    text-placeholder: rgba(249, 250, 251, 0.4),
+    text-on-color: #FFFFFF,
+    text-disabled: rgba(249, 250, 251, 0.3),
+    
+    // Layer colors - For cards, modals, elevated surfaces
+    layer-01: rgba(255, 255, 255, 0.05),
+    layer-02: rgba(255, 255, 255, 0.08),
+    layer-03: rgba(255, 255, 255, 0.12),
+    
+    // Support colors
+    support-error: #EF4444,
+    support-success: #10B981,
+    support-warning: #F59E0B,
+    support-info: #6366F1,
+  )
+);
+
+// Import all Carbon styles
+@use '@carbon/react';
+
+// Custom CSS variables for space-specific styling
+:root {
+  // Custom space theme colors
+  --space-dark: #030712;
+  --space-blue: #0A1929;
+  --cosmic-purple: #6366F1;
+  --nebula-pink: #EC4899;
+  --alien-green: #10B981;
+  --solar-orange: #F59E0B;
+  --star-white: #F9FAFB;
+  
+  // Custom gradients
+  --cosmic-gradient: linear-gradient(135deg, #6366F1, #EC4899);
+  --space-gradient: linear-gradient(to bottom, #030712, #0A1929);
+  
+  // Glass morphism effects
+  --glass-effect: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-hover: rgba(255, 255, 255, 0.08);
+}
+
+// CRITICAL: Modal text visibility overrides - MUST come after Carbon imports
+// These overrides ensure text is visible inside Carbon modals
+.cds--modal-container {
+  background: rgba(10, 25, 41, 0.95) !important;
+  backdrop-filter: blur(10px);
+  
+  // Force ALL text to be white by default
+  * {
+    color: var(--star-white) !important;
+  }
+}
+
+.cds--modal-content {
+  background: transparent !important;
+}
+
+.cds--modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  
+  .cds--modal-header__heading {
+    color: var(--star-white) !important;
+  }
+}
+
+.cds--modal-body {
+  background: transparent !important;
+  color: var(--star-white) !important;
+  
+  // Force ALL elements to be white
+  * {
+    color: var(--star-white) !important;
+  }
+  
+  // Now allow specific Tailwind classes to override
+  .text-cosmic-purple, .text-purple-400 {
+    color: var(--cosmic-purple) !important;
+  }
+  
+  .text-alien-green {
+    color: var(--alien-green) !important;
+  }
+  
+  .text-nebula-pink {
+    color: var(--nebula-pink) !important;
+  }
+  
+  .text-solar-orange {
+    color: var(--solar-orange) !important;
+  }
+  
+  .text-blue-400 {
+    color: #60A5FA !important;
+  }
+  
+  .text-yellow-400 {
+    color: #FACC15 !important;
+  }
+  
+  .text-white, .text-star-white {
+    color: #FFFFFF !important;
+  }
+  
+  // SVG icons should also be visible
+  svg {
+    color: inherit !important;
+  }
+}
+
+// Made with Bob

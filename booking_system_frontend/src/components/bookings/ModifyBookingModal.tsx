@@ -3,7 +3,7 @@ import type { Booking, Flight, SeatClass } from '../../types';
 import { Modal, Button } from '../common';
 import { modifyBooking, isErrorResponse } from '../../services/api';
 import { formatCurrency } from '../../utils/formatters';
-import { Baby, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { PedestrianChild, ArrowUp, ArrowDown, Subtract } from '@carbon/icons-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -122,22 +122,22 @@ export const ModifyBookingModal = ({
   const getPriceDifferenceDisplay = () => {
     if (priceDifference === 0) {
       return (
-        <div className="flex items-center gap-2 text-star-white/60">
-          <Minus size={20} />
+        <div className="flex items-center gap-2 text-star-white">
+          <Subtract size={20} />
           <span>No price change</span>
         </div>
       );
     } else if (priceDifference > 0) {
       return (
         <div className="flex items-center gap-2 text-red-400">
-          <TrendingUp size={20} />
+          <ArrowUp size={20} />
           <span>Additional charge: {formatCurrency(priceDifference)}</span>
         </div>
       );
     } else {
       return (
         <div className="flex items-center gap-2 text-green-400">
-          <TrendingDown size={20} />
+          <ArrowDown size={20} />
           <span>Refund: {formatCurrency(Math.abs(priceDifference))}</span>
         </div>
       );
@@ -150,26 +150,26 @@ export const ModifyBookingModal = ({
         <div className="space-y-6">
           <div className="glass-card p-4 space-y-3">
             <div className="flex justify-between">
-              <span className="text-star-white/60">Current Class:</span>
+              <span className="text-star-white">Current Class:</span>
               <span className="text-star-white font-semibold capitalize">{booking.seat_class}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-star-white/60">New Class:</span>
+              <span className="text-star-white">New Class:</span>
               <span className="text-star-white font-semibold capitalize">{selectedClass}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-star-white/60">Infant:</span>
+              <span className="text-star-white">Infant:</span>
               <span className="text-star-white font-semibold">
                 {hasInfant ? 'Yes' : 'No'}
               </span>
             </div>
             <div className="border-t border-white/10 pt-3 mt-3">
               <div className="flex justify-between mb-2">
-                <span className="text-star-white/60">Current Price:</span>
+                <span className="text-star-white">Current Price:</span>
                 <span className="text-star-white">{formatCurrency(oldPrice)}</span>
               </div>
               <div className="flex justify-between mb-2">
-                <span className="text-star-white/60">New Price:</span>
+                <span className="text-star-white">New Price:</span>
                 <span className="text-star-white">{formatCurrency(newPrice)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg">
@@ -205,17 +205,17 @@ export const ModifyBookingModal = ({
       <div className="space-y-6">
         {/* Current Booking Info */}
         <div className="glass-card p-4">
-          <h3 className="text-sm font-semibold text-star-white/60 mb-2">Current Booking</h3>
+          <h3 className="text-sm font-semibold text-star-white mb-2">Current Booking</h3>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-star-white font-semibold">
                 {flight.origin} → {flight.destination}
               </p>
-              <p className="text-sm text-star-white/60">Booking #{booking.booking_id}</p>
+              <p className="text-sm text-star-white">Booking #{booking.booking_id}</p>
             </div>
             <div className="text-right">
               <p className="text-star-white font-semibold capitalize">{booking.seat_class}</p>
-              <p className="text-sm text-star-white/60">{formatCurrency(oldPrice)}</p>
+              <p className="text-sm text-star-white">{formatCurrency(oldPrice)}</p>
             </div>
           </div>
         </div>
@@ -240,7 +240,7 @@ export const ModifyBookingModal = ({
                     p-4 rounded-lg border-2 transition-all text-left
                     ${isSelected
                       ? `border-${option.color}-500 bg-${option.color}-500/10`
-                      : 'border-white/10 bg-white/5'
+                      : 'border-white/10 bg-white/20'
                     }
                     ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-white/30'}
                   `}
@@ -254,9 +254,9 @@ export const ModifyBookingModal = ({
                     )}
                   </div>
                   <h4 className="text-star-white font-semibold mb-1">{option.label}</h4>
-                  <p className="text-xs text-star-white/60 mb-2">{option.description}</p>
+                  <p className="text-xs text-star-white mb-2">{option.description}</p>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-star-white/60">
+                    <span className="text-star-white">
                       {available} seat{available !== 1 ? 's' : ''} left
                     </span>
                     <span className="text-star-white font-semibold">
@@ -273,17 +273,17 @@ export const ModifyBookingModal = ({
         <div className="glass-card p-4">
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-3">
-              <Baby className="text-cosmic-purple" size={24} />
+              <PedestrianChild className="text-cosmic-purple" size={24} />
               <div>
                 <p className="text-star-white font-semibold">Traveling with lap infant</p>
-                <p className="text-xs text-star-white/60">Free - no seat required</p>
+                <p className="text-xs text-star-white">Free - no seat required</p>
               </div>
             </div>
             <input
               type="checkbox"
               checked={hasInfant}
               onChange={(e) => setHasInfant(e.target.checked)}
-              className="w-5 h-5 rounded border-white/20 bg-white/5 text-cosmic-purple focus:ring-cosmic-purple"
+              className="w-5 h-5 rounded border-white/20 bg-white/20 text-cosmic-purple focus:ring-cosmic-purple"
             />
           </label>
         </div>
@@ -295,14 +295,14 @@ export const ModifyBookingModal = ({
             animate={{ opacity: 1, y: 0 }}
             className="glass-card p-4"
           >
-            <h3 className="text-sm font-semibold text-star-white/60 mb-3">Price Summary</h3>
+            <h3 className="text-sm font-semibold text-star-white mb-3">Price Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-star-white/60">Current Price:</span>
+                <span className="text-star-white">Current Price:</span>
                 <span className="text-star-white">{formatCurrency(oldPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-star-white/60">New Price:</span>
+                <span className="text-star-white">New Price:</span>
                 <span className="text-star-white">{formatCurrency(newPrice)}</span>
               </div>
               <div className="border-t border-white/10 pt-2 mt-2">

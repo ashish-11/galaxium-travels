@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Flight, SeatClass } from '../../types';
 import { Modal, Button } from '../common';
-import { Plane, Calendar, Clock, DollarSign, Baby } from 'lucide-react';
+import { Plane, Calendar as CalendarIcon, Time, Currency, PedestrianChild } from '@carbon/icons-react';
 import { formatCurrency, formatDate, calculateDuration } from '../../utils/formatters';
 import { bookFlight, isErrorResponse } from '../../services/api';
 import { useUser } from '../../hooks/useUser';
@@ -82,9 +82,9 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
       title="Confirm Your Booking"
       size="md"
     >
-      <div className="space-y-6">
+      <div className="space-y-6" style={{ color: '#F9FAFB' }}>
         {/* Flight Summary */}
-        <div className="glass-card p-4 bg-white/5">
+        <div className="glass-card p-4 bg-white/20">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-2 rounded-lg bg-cosmic-gradient">
               <Plane className="text-white" size={24} />
@@ -93,7 +93,7 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
               <h3 className="text-xl font-bold text-star-white">
                 {flight.origin} → {flight.destination}
               </h3>
-              <p className="text-sm text-star-white/60">
+              <p className="text-sm text-star-white">
                 Flight #{flight.flight_id}
               </p>
             </div>
@@ -102,9 +102,9 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
           <div className="space-y-3">
             {/* Departure */}
             <div className="flex items-start gap-3">
-              <Calendar className="text-cosmic-purple mt-1" size={20} />
+              <CalendarIcon className="text-cosmic-purple mt-1" size={20} />
               <div>
-                <p className="text-xs text-star-white/60">Departure</p>
+                <p className="text-xs text-star-white">Departure</p>
                 <p className="text-star-white font-medium">
                   {formatDate(flight.departure_time)}
                 </p>
@@ -113,9 +113,9 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
 
             {/* Arrival */}
             <div className="flex items-start gap-3">
-              <Calendar className="text-cosmic-purple mt-1" size={20} />
+              <CalendarIcon className="text-cosmic-purple mt-1" size={20} />
               <div>
-                <p className="text-xs text-star-white/60">Arrival</p>
+                <p className="text-xs text-star-white">Arrival</p>
                 <p className="text-star-white font-medium">
                   {formatDate(flight.arrival_time)}
                 </p>
@@ -124,9 +124,9 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
 
             {/* Duration */}
             <div className="flex items-start gap-3">
-              <Clock className="text-cosmic-purple mt-1" size={20} />
+              <Time className="text-cosmic-purple mt-1" size={20} />
               <div>
-                <p className="text-xs text-star-white/60">Duration</p>
+                <p className="text-xs text-star-white">Duration</p>
                 <p className="text-star-white font-medium">
                   {calculateDuration(flight.departure_time, flight.arrival_time)}
                 </p>
@@ -141,14 +141,14 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
             <div className="flex items-center gap-3">
               <span className="text-3xl">{classInfo.icon}</span>
               <div>
-                <p className="text-sm text-star-white/60">Selected Class</p>
+                <p className="text-sm text-star-white">Selected Class</p>
                 <p className={`text-lg font-bold ${classInfo.color}`}>
                   {classInfo.label}
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-star-white/60">Price</p>
+              <p className="text-sm text-star-white">Price</p>
               <p className="text-2xl font-bold text-alien-green">
                 {formatCurrency(price)}
               </p>
@@ -157,17 +157,17 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
         </div>
 
         {/* Infant Selection */}
-        <div className="glass-card p-4 bg-white/5">
+        <div className="glass-card p-4 bg-white/20">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Baby className="text-cosmic-purple" size={20} />
+              <PedestrianChild className="text-cosmic-purple" size={20} />
               <h4 className="text-sm font-semibold text-star-white">
                 Traveling with Infant?
               </h4>
             </div>
           </div>
           
-          <p className="text-xs text-star-white/60 mb-3">
+          <p className="text-xs text-star-white mb-3">
             Lap infant under 2 years (free, no seat required)
           </p>
           
@@ -176,7 +176,7 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
             className={`w-full p-3 rounded-lg border transition-all ${
               hasInfant
                 ? 'border-cosmic-purple bg-cosmic-purple/20 text-star-white'
-                : 'border-white/10 bg-white/5 text-star-white/60 hover:border-white/20'
+                : 'border-white/10 bg-white/10 text-star-white hover:border-white/20'
             }`}
           >
             <div className="flex items-center justify-between">
@@ -192,23 +192,23 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
 
         {/* Passenger Info */}
         {user && (
-          <div className="glass-card p-4 bg-white/5">
+          <div className="glass-card p-4 bg-white/20">
             <h4 className="text-sm font-semibold text-star-white mb-2">
               Passenger Information
             </h4>
             <p className="text-star-white">{user.name}</p>
-            <p className="text-star-white/60 text-sm">{user.email}</p>
+            <p className="text-star-white text-sm">{user.email}</p>
           </div>
         )}
 
         {/* Total Price */}
         <div className="flex items-center justify-between p-4 glass-card bg-cosmic-gradient">
           <div className="flex items-center gap-2">
-            <DollarSign className="text-white" size={24} />
+            <Currency className="text-white" size={24} />
             <div>
               <span className="text-white font-semibold">Total Price</span>
               {hasInfant && (
-                <p className="text-xs text-white/80">+ 1 infant (free)</p>
+                <p className="text-xs text-white">+ 1 infant (free)</p>
               )}
             </div>
           </div>
@@ -236,7 +236,7 @@ export const BookingModal = ({ isOpen, onClose, flight, seatClass, onSuccess }: 
           </Button>
         </div>
 
-        <p className="text-xs text-star-white/60 text-center">
+        <p className="text-xs text-star-white text-center">
           By confirming, you agree to our terms and conditions
         </p>
       </div>

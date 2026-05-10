@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Flight, SeatClass } from '../../types';
-import { Card, Button } from '../common';
-import { Plane, Clock } from 'lucide-react';
+import { Tile } from '@carbon/react';
+import { Plane, Time } from '@carbon/icons-react';
+import { Button } from '../common';
 import { formatCurrency, formatDate, formatTime, calculateDuration } from '../../utils/formatters';
 import { motion } from 'framer-motion';
 
@@ -61,7 +62,7 @@ export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
       whileHover={{ y: -4 }}
       transition={{ duration: 0.3 }}
     >
-      <Card className="h-full flex flex-col">
+      <Tile className="h-full flex flex-col">
         {/* Route Header */}
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
@@ -105,7 +106,7 @@ export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
 
           {/* Duration */}
           <div className="flex items-center gap-2 text-star-white/70">
-            <Clock size={16} />
+            <Time size={16} />
             <span className="text-sm">
               Duration: {calculateDuration(flight.departure_time, flight.arrival_time)}
             </span>
@@ -168,7 +169,7 @@ export const FlightCard = ({ flight, onBook }: FlightCardProps) => {
             ? 'Select a Class'
             : `Book ${selectedClass.charAt(0).toUpperCase() + selectedClass.slice(1)}`}
         </Button>
-      </Card>
+      </Tile>
     </motion.div>
   );
 };

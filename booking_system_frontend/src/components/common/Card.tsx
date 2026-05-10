@@ -1,6 +1,10 @@
+/**
+ * Card component using Carbon Design System Tile
+ * Maintains compatibility with existing Card API
+ */
 import type { ReactNode } from 'react';
+import { Tile, ClickableTile } from '@carbon/react';
 import { motion } from 'framer-motion';
-import clsx from 'clsx';
 
 interface CardProps {
   children: ReactNode;
@@ -10,22 +14,29 @@ interface CardProps {
 }
 
 export const Card = ({ children, className, hover = false, onClick }: CardProps) => {
-  const Component = onClick ? motion.button : motion.div;
+  // Use ClickableTile if onClick is provided, otherwise use regular Tile
+  if (onClick) {
+    return (
+      <motion.div
+        whileHover={hover ? { scale: 1.02, y: -4 } : undefined}
+        transition={{ duration: 0.2 }}
+      >
+        <ClickableTile className={className} onClick={onClick}>
+          {children}
+        </ClickableTile>
+      </motion.div>
+    );
+  }
   
   return (
-    <Component
-      className={clsx(
-        'glass-card p-6',
-        hover && 'hover:bg-white/10 cursor-pointer',
-        onClick && 'w-full text-left',
-        className
-      )}
+    <motion.div
       whileHover={hover ? { scale: 1.02, y: -4 } : undefined}
       transition={{ duration: 0.2 }}
-      onClick={onClick}
     >
-      {children}
-    </Component>
+      <Tile className={className}>
+        {children}
+      </Tile>
+    </motion.div>
   );
 };
 

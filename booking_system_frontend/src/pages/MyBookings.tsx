@@ -6,7 +6,7 @@ import { BookingCard } from '../components/bookings/BookingCard';
 import { ModifyBookingModal } from '../components/bookings/ModifyBookingModal';
 import { getUserBookings, getFlights, cancelBooking, isErrorResponse } from '../services/api';
 import { useUser } from '../hooks/useUser';
-import { AlertCircle } from 'lucide-react';
+import { WarningAlt } from '@carbon/icons-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -134,7 +134,7 @@ export const MyBookings = () => {
           animate={{ opacity: 1 }}
           className="glass-card p-12 text-center"
         >
-          <AlertCircle className="mx-auto mb-4 text-star-white/50" size={48} />
+          <WarningAlt className="mx-auto mb-4 text-star-white/50" size={48} />
           <h3 className="text-xl font-semibold text-star-white mb-2">
             No bookings yet
           </h3>
@@ -205,7 +205,7 @@ export const MyBookings = () => {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-star-white/70">
+          <p className="text-star-white text-base">
             Are you sure you want to cancel this booking? This action cannot be undone.
           </p>
           <div className="flex gap-3">
